@@ -29,10 +29,11 @@ RUN dnf install -y --setopt=tsflags=nodocs \
 # set up podman storage and config directories
 RUN mkdir -p /home/user/.config/containers /home/user/.local/share/containers
 COPY containers.conf storage.conf /home/user/.config/containers/
-RUN chmod -R g=u /home/user/.config /home/user/.local && \
-    chmod -R g=u /home/user/.local/share/containers
+#RUN chmod -R g=u /home/user/.config /home/user/.local && \
+#    chmod -R g=u /home/user/.local/share/containers
 #chown -R user:0 /home/user/.config /home/user/.local && \
-    
+RUN chgrp -R 0 /home/user && chmod -R g=u /home/user
+
 COPY containers.conf storage.conf /home/user/.config/containers/
 
 # alias docker to podman

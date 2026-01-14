@@ -12,6 +12,8 @@ RUN uv pip install "git+https://github.com/rhadp/jumpstarter@develop#subdirector
 COPY init-git ${INIT_SCRIPTS_DIR}/init-git
 
 RUN mkdir -p /home/user/.config/jumpstarter/clients/ && \
-    chmod +x ${INIT_SCRIPTS_DIR}/* 
+    chmod +x ${INIT_SCRIPTS_DIR}/* && \
+    chgrp -R 0 /home/tooling && chmod -R g=u /home/tooling && \
+    chgrp -R 0 /home/user && chmod -R g=u /home/user
 
 USER 10001
