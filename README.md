@@ -4,15 +4,7 @@ Containers images with tools for developers 👨‍💻👩‍💻 and to run wo
 
 ## Container Images
 
-### Runtime
-A runtime environment with Python, oc, kubectl, and jumpstarter, based on Fedora 42.
-
-### Builder
-A build environment to support application development in CI/CD tools and cloud-based IDEs. 
-Based on the Red Hat Universal Base Image 9 (UBI9) container image.
-
-### Codespaces
-Based on the `Builder` image with additional Red Hat Dev Spaces and GitHub CodeSpaces configuration.
+TBD
 
 ## Building the container images
 
@@ -24,11 +16,11 @@ make build-all
 
 Build Chain Structure
 
-  base (ubi9)
+  base (UDI9)
   ├── builder
-  │   └── codespaces
-  └── runtime
-      └── pipeline
+  |    └── codespaces
+  runtime (UBI9)
+  └── pipeline
 
 Build on GitHub:
 
