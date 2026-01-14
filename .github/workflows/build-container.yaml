@@ -128,7 +128,7 @@ jobs:
               ${{ vars.REGISTRY_ORG }}/${{ inputs.container_name }}:${{ needs.prepare.outputs.version }}-arm64
           done
           # get digest from the version tag
-          DIGEST=$(docker buildx imagetools inspect ${{ vars.REGISTRY_ORG }}/${{ inputs.container_name }}:${{ needs.prepare.outputs.version }} --format '{{.Manifest.Digest}}')
+          DIGEST=$(docker buildx imagetools inspect ${{ vars.REGISTRY_ORG }}/${{ inputs.container_name }}:${{ needs.prepare.outputs.version }} --format '{{json .Manifest}}' | jq -r '.digest')
           echo "digest=${DIGEST}" >> $GITHUB_OUTPUT
 
       - name: generate artifact attestation
