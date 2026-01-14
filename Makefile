@@ -2,7 +2,7 @@
 # Build container images locally using Podman
 
 # Default registry and namespace
-REGISTRY ?= localhost
+REGISTRY ?= ghcr.io
 NAMESPACE ?= rhadp
 
 # Image names and tags

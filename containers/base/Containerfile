@@ -6,7 +6,7 @@ ARG TARGETARCH
 USER root
 
 # install centos stream & fedora repos
-ENV CENTOS_RELEASE=9.0-30
+ENV CENTOS_RELEASE=9.0-34
 RUN if [ "$TARGETARCH" = "arm64" ]; then \
         dnf install -y --setopt=tsflags=nodocs \
         https://mirror.stream.centos.org/9-stream/BaseOS/aarch64/os/Packages/centos-stream-repos-${CENTOS_RELEASE}.el9.noarch.rpm \
