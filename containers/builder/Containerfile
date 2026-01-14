@@ -4,7 +4,7 @@ USER root
 
 # $PROFILE_EXT contains all additions made to the bash environment
 ENV PROFILE_EXT=/etc/profile.d/udi_environment.sh
-RUN touch ${PROFILE_EXT} && chown 10001 ${PROFILE_EXT}
+RUN touch ${PROFILE_EXT} && chown user ${PROFILE_EXT}
 
 # install all development packages in a single layer
 RUN dnf install -y --setopt=tsflags=nodocs \
@@ -32,4 +32,4 @@ RUN mkdir -p /home/tooling/.cargo && \
     rustup -y --no-modify-path --profile minimal -c rust-src -c rust-analysis -c rls && \
     chgrp -R 0 /home/tooling && chmod -R g=u /home/tooling
 
-USER 10001
+USER user
