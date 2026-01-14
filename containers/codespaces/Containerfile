@@ -14,4 +14,4 @@ COPY init-git ${INIT_SCRIPTS_DIR}/init-git
 RUN mkdir -p /home/user/.config/jumpstarter/clients/ && \
     chmod +x ${INIT_SCRIPTS_DIR}/* 
 
-USER user
+USER 10001

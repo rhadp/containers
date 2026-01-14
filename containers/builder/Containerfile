@@ -32,4 +32,4 @@ RUN mkdir -p /home/tooling/.cargo && \
     rustup -y --no-modify-path --profile minimal -c rust-src -c rust-analysis -c rls && \
     chgrp -R 0 /home/tooling && chmod -R g=u /home/tooling
 
-USER user
+USER 10001
