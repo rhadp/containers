@@ -1,7 +1,7 @@
 # Execute all scripts in .scripts folder
 set -e
 
-INIT_SCRIPTS_DIR="${INIT_SCRIPTS_DIR:-/home/workspace/.scripts/init}"
+INIT_SCRIPTS_DIR="${INIT_SCRIPTS_DIR:-/home/tooling/.scripts/init}"
 
 [ ! -d "$INIT_SCRIPTS_DIR" ] && { echo "error: $INIT_SCRIPTS_DIR not found"; exit 0; }
 

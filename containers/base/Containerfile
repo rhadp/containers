@@ -1,6 +1,4 @@
-# this is a modified version of https://github.com/devfile/cloud-dev-images/blob/main/ubi9/Dockerfile
-
-FROM registry.access.redhat.com/ubi9/ubi:9.7 
+FROM registry.redhat.io/devspaces/udi-rhel9:3.25.0
 
 ARG TARGETARCH
 USER root
@@ -24,25 +22,25 @@ RUN dnf install -y --setopt=tsflags=nodocs \
     python3.12 python3.12-devel python3-pip \
     git jq yq \
     nss_wrapper kmod openssh-clients nc stow \
-    && dnf clean all \
-    && rm -rf /var/cache/dnf
+    fuse-overlayfs slirp4netns shadow-utils && \
+    dnf clean all && \
+    rm -rf /var/cache/dnf
 
-# create default directories and install oc client in a single layer
-ENV OC_VERSION=4.20
-RUN mkdir -p /home/user/.config/pip \
-             /home/user/.config/containers \
-             /home/user/.cache \
-             /home/user/.ssh \
-             /home/workspace/.scripts/init \
-             /home/workspace/.config/go && \
-    if [ "$TARGETARCH" = "arm64" ]; then \
-        curl -L https://mirror.openshift.com/pub/openshift-v4/arm64/clients/ocp/stable-${OC_VERSION}/openshift-client-linux.tar.gz | tar -C /usr/local/bin -xz --no-same-owner; \
-    else \
-        curl -L https://mirror.openshift.com/pub/openshift-v4/x86_64/clients/ocp/stable-${OC_VERSION}/openshift-client-linux.tar.gz | tar -C /usr/local/bin -xz --no-same-owner; \
-    fi && \
-    chmod +x /usr/local/bin/oc
+# set up podman storage and config directories
+RUN mkdir -p /home/user/.config/containers /home/user/.local/share/containers && \
+    chown -R 10001:0 /home/user/.config /home/user/.local && \
+    chmod -R g=u /home/user/.config /home/user/.local
 
-    # python dependencies
+COPY containers.conf storage.conf /home/user/.config/containers/
+
+# alias docker to podman
+RUN echo 'alias docker=podman' >> ${PROFILE_EXT}
+
+# configure podman for nested rootless operation (no user namespaces)
+ENV BUILDAH_ISOLATION=chroot \
+    _CONTAINERS_USERNS_CONFIGURED=""
+
+# python dependencies
 COPY --from=ghcr.io/astral-sh/uv:latest /uv  /bin/uv
 COPY --from=ghcr.io/astral-sh/uv:latest /uvx /bin/uvx
 
@@ -57,15 +55,15 @@ RUN uv venv /venv && \
 
 # add init-workspace script and set up environment in a single layer
 ENV PATH="/venv/bin:$PATH" \
-    SCRIPTS_DIR=/home/workspace/.scripts \
-    INIT_SCRIPTS_DIR=/home/workspace/.scripts/init \
+    SCRIPTS_DIR=/home/tooling/.scripts \
+    INIT_SCRIPTS_DIR=/home/tooling/.scripts/init \
     SHELL=/usr/bin/bash
 
+RUN mkdir -p ${INIT_SCRIPTS_DIR}
 COPY init-workspace ${SCRIPTS_DIR}/init-workspace
 
 RUN echo "alias python='uv run python'" >> /home/user/.bashrc && \
     chmod +x ${SCRIPTS_DIR}/init-workspace && \
-    stow . -t /home/user/ -d /home/workspace/ --no-folding && \
     chgrp -R 0 /home && chmod -R g=u /etc/passwd /etc/group /home /etc/pki
 
 # Set HOME. Required for CRI-o to set /etc/passwd correctly and in general for other CLI tools

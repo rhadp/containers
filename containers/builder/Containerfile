@@ -11,38 +11,25 @@ RUN dnf install -y --setopt=tsflags=nodocs \
     autoconf patch lsof redhat-rpm-config \
     openssl-devel libcurl-devel libxml2-devel libxslt-devel zlib-devel \
     unzip wget bzip2 zip \
-    podman \
     llvm-toolset \
     gcc gcc-c++ clang clang-libs clang-tools-extra \
     gdb cmake automake autoconf make && \
     dnf -y clean all --enablerepo='*' && \
     rm -rf /var/cache/dnf
 
-# rust
-ENV CARGO_HOME=/home/workspace/.cargo \
-    RUSTUP_HOME=/home/workspace/.rustup \
-    PATH=/home/workspace/.cargo/bin:${PATH}
+# already istalled: go, python, java, node
 
-RUN mkdir -p /home/workspace/.cargo && \
-    mkdir -p /home/workspace/.rustup && \
+# install rust
+ENV CARGO_HOME=/home/tooling/.cargo \
+    RUSTUP_HOME=/home/tooling/.rustup \
+    PATH=/home/tooling/.cargo/bin:${PATH}
+
+RUN mkdir -p /home/tooling/.cargo && \
+    mkdir -p /home/tooling/.rustup && \
     curl --proto '=https' --tlsv1.2 -sSfo rustup https://sh.rustup.rs && \
     chmod +x rustup && \
     mv rustup /usr/bin/ && \
     rustup -y --no-modify-path --profile minimal -c rust-src -c rust-analysis -c rls && \
-    chgrp -R 0 /home/workspace && chmod -R g=u /home/workspace
-
-# alias docker to podman
-RUN echo 'alias docker=podman' >> ${PROFILE_EXT}
-
-# configure container engine
-COPY --chown=0:0 containers.conf /etc/containers/containers.conf
-
-# create symbolic links, directories, and set all permissions in a single layer
-RUN stow . -t /home/user/ -d /home/workspace/ --no-folding && \
-    mkdir -p /home/user/.config \
-             /home/user/.local/share/containers \
-             /home/user/.local/share/containers/storage && \
-    chown -R 10001:0 /home/user/.config /home/user/.local && \
-    chgrp -R 0 /home/user && chmod -R g=u /home/user
+    chgrp -R 0 /home/tooling && chmod -R g=u /home/tooling
 
 USER 10001
