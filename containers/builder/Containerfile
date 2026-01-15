@@ -6,18 +6,23 @@ USER root
 ENV PROFILE_EXT=/etc/profile.d/udi_environment.sh
 RUN touch ${PROFILE_EXT} && chown user ${PROFILE_EXT}
 
-# install all development packages in a single layer
+# install common development packages
 RUN dnf install -y --setopt=tsflags=nodocs \
     autoconf patch lsof redhat-rpm-config \
     openssl-devel libcurl-devel libxml2-devel libxslt-devel zlib-devel \
     unzip wget bzip2 zip \
     llvm-toolset \
-    gcc gcc-c++ clang clang-libs clang-tools-extra \
     gdb cmake automake autoconf make && \
     dnf -y clean all --enablerepo='*' && \
     rm -rf /var/cache/dnf
 
-# already istalled: go, python, java, node
+# install c/c++ development packages
+RUN dnf install -y --setopt=tsflags=nodocs \
+    gcc gcc-c++ clang clang-libs clang-tools-extra && \
+    dnf -y clean all --enablerepo='*' && \
+    rm -rf /var/cache/dnf
+
+# already installed: go, python, java, node
 
 # install rust
 ENV CARGO_HOME=/home/tooling/.cargo \
@@ -29,8 +34,8 @@ RUN mkdir -p /home/tooling/.cargo && \
     curl --proto '=https' --tlsv1.2 -sSfo rustup https://sh.rustup.rs && \
     chmod +x rustup && \
     mv rustup /usr/bin/ && \
-    rustup -y --no-modify-path --profile minimal -c rust-src -c rust-analysis -c rls && \
-    chgrp -R 0 /home/tooling && chmod -R g=u /home/tooling && \
-    chgrp -R 0 /home/user && chmod -R g=u /home/user
+    rustup -y --no-modify-path --profile minimal -c rust-src -c rust-analysis -c rls
+
+RUN chgrp -R 0 /home/user /home/tooling && chmod -R g=u /home/user /home/tooling
 
 USER 10001

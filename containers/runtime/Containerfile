@@ -39,13 +39,15 @@ COPY --from=ghcr.io/astral-sh/uv:latest /uvx /bin/uvx
 ENV UV_PYTHON=python3.12 VIRTUAL_ENV=/venv
 
 # install python dependencies, jumpstarter, create directories, and set permissions in a single layer
+ENV JUMPSTARTER_VERSION=main \
+    JUMPSTARTER_REPO=https://github.com/rhadp/jumpstarter
 COPY requirements.txt /tmp/requirements.txt
 RUN uv venv /venv && \
-    uv pip install "git+https://github.com/rhadp/jumpstarter@develop#subdirectory=packages/jumpstarter-all" && \
+    uv pip install "git+${JUMPSTARTER_REPO}@${JUMPSTARTER_VERSION}#subdirectory=packages/jumpstarter-all" && \
     uv pip install -r /tmp/requirements.txt && \
     rm -rf /tmp/requirements.txt && \
     mkdir -p /etc/jumpstarter/exporters && \
     mkdir -p /home/user/.config/jumpstarter/clients/ && \
-    chgrp -R 0 /home/user && chmod -R g=u /home/user
+    chgrp -R 0 /home/user /home/tooling && chmod -R g=u /home/user /home/tooling
 
 USER 10001
