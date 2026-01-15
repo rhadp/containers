@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(tree:*)",
+      "WebSearch",
+      "WebFetch(domain:docs.redhat.com)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}

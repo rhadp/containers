@@ -48,6 +48,6 @@ RUN uv venv /venv && \
     rm -rf /tmp/requirements.txt && \
     mkdir -p /etc/jumpstarter/exporters && \
     mkdir -p /home/user/.config/jumpstarter/clients/ && \
-    chgrp -R 0 /home/user /home/tooling && chmod -R g=u /home/user /home/tooling
+    chgrp -R 0 /home/user && chmod -R g=u /home/user
 
 USER 10001
