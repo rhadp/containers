@@ -6,7 +6,6 @@ REGISTRY ?= ghcr.io
 NAMESPACE ?= rhadp
 
 # Image names and tags
-BASE_IMAGE = $(REGISTRY)/$(NAMESPACE)/base
 RUNTIME_IMAGE = $(REGISTRY)/$(NAMESPACE)/runtime
 PIPELINE_IMAGE = $(REGISTRY)/$(NAMESPACE)/pipeline
 CODESPACES_IMAGE = $(REGISTRY)/$(NAMESPACE)/codespaces
@@ -23,35 +22,18 @@ BUILD_ARGS ?= --build-arg TARGETARCH=$(shell uname -m | sed 's/x86_64/amd64/')
 .PHONY: help all build-all base builder runtime pipeline codespaces clean clean-all push-all
 
 # Build all images
-build-all: base runtime builder pipeline codespaces
+build-all: runtime builder pipeline codespaces
 	@echo "✅ All images built successfully!"
 
-# Build the base image
-base:
-	@echo "🔨 Building base image..."
-	$(CONTAINER_TOOL) build $(BUILD_ARGS) \
-		-f containers/base/Containerfile \
-		-t $(BASE_IMAGE):$(TAG) \
-		containers/base/
-	@echo "✅ Base image built: $(BASE_IMAGE):$(TAG)"
 
 # Build the runtime image
-runtime: base
+runtime: 
 	@echo "🔨 Building runtime image..."
 	$(CONTAINER_TOOL) build $(BUILD_ARGS) \
 		-f containers/runtime/Containerfile \
 		-t $(RUNTIME_IMAGE):$(TAG) \
 		containers/runtime/
 	@echo "✅ Runtime image built: $(RUNTIME_IMAGE):$(TAG)"
-
-# Build the runtime image
-builder: base
-	@echo "🔨 Building builder image..."
-	$(CONTAINER_TOOL) build $(BUILD_ARGS) \
-		-f containers/builder/Containerfile \
-		-t $(BUILDER_IMAGE):$(TAG) \
-		containers/builder/
-	@echo "✅ Builder image built: $(BUILDER_IMAGE):$(TAG)"
 
 # Build the pipeline image
 pipeline: runtime
@@ -61,6 +43,15 @@ pipeline: runtime
 		-t $(PIPELINE_IMAGE):$(TAG) \
 		containers/pipeline/
 	@echo "✅ Pipeline image built: $(PIPELINE_IMAGE):$(TAG)"
+
+# Build the runtime image
+builder:
+	@echo "🔨 Building builder image..."
+	$(CONTAINER_TOOL) build $(BUILD_ARGS) \
+		-f containers/builder/Containerfile \
+		-t $(BUILDER_IMAGE):$(TAG) \
+		containers/builder/
+	@echo "✅ Builder image built: $(BUILDER_IMAGE):$(TAG)"
 
 # Build the codespaces image (depends on builder)
 codespaces: builder
@@ -74,7 +65,6 @@ codespaces: builder
 # Clean up locally built images
 clean:
 	@echo "🧹 Cleaning up locally built images..."
-	-$(CONTAINER_TOOL) rmi $(BASE_IMAGE):$(TAG) 2>/dev/null || true
 	-$(CONTAINER_TOOL) rmi $(RUNTIME_IMAGE):$(TAG) 2>/dev/null || true
 	-$(CONTAINER_TOOL) rmi $(CODESPACES_IMAGE):$(TAG) 2>/dev/null || true
 	-$(CONTAINER_TOOL) rmi $(PIPELINE_IMAGE):$(TAG) 2>/dev/null || true
@@ -93,9 +83,9 @@ clean-all: clean
 # Show image info
 info:
 	@echo "📊 Image Information:"
-	@echo "Base:       $(BASE_IMAGE):$(TAG)"
-	@echo "Runtime:    $(RUNTIME_IMAGE):$(TAG)"
+	@echo "Builder:    $(BUILDER_IMAGE):$(TAG)"
 	@echo "Codespaces: $(CODESPACES_IMAGE):$(TAG)"
+	@echo "Runtime:    $(RUNTIME_IMAGE):$(TAG)"
 	@echo "Pipeline:   $(PIPELINE_IMAGE):$(TAG)"
 	@echo ""
 	@echo "Registry:   $(REGISTRY)"
