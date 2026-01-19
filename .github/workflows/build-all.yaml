@@ -35,18 +35,18 @@ jobs:
       id-token: write
       attestations: write
 
-#  build-codespaces:
-#    name: "building 'codespaces'"
-#    needs: [build-builder]
-#    uses: ./.github/workflows/build-container.yaml
-#    with:
-#      container_name: codespaces
-#    secrets: inherit
-#    permissions:
-#      packages: write
-#      contents: read
-#      id-token: write
-#      attestations: write
+  build-codespaces:
+    name: "building 'codespaces'"
+    needs: [build-builder]
+    uses: ./.github/workflows/build-container.yaml
+    with:
+      container_name: codespaces
+    secrets: inherit
+    permissions:
+      packages: write
+      contents: read
+      id-token: write
+      attestations: write
 
   build-runtime:
     name: "building 'runtime'"

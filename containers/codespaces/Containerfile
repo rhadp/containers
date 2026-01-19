@@ -11,10 +11,10 @@ RUN uv venv /venv && \
     uv pip install -r /tmp/requirements.txt
 
 # init scripts, create directories, and set permissions in a single layer
-COPY init-git ${INIT_SCRIPTS_DIR}/init-git
+#COPY init-git ${INIT_SCRIPTS_DIR}/init-git
 
-RUN mkdir -p /home/user/.config/jumpstarter/clients/ && \
-    chmod +x ${INIT_SCRIPTS_DIR}/* && \
-    chgrp -R 0 /home/user /home/tooling && chmod -R g=u /home/user /home/tooling
+# A last pass to make sure that an arbitrary user can write in $HOME
+RUN chgrp -R 0 /home && chmod -R g=u /home
 
+# back to the user
 USER 10001

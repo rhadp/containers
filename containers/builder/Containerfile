@@ -67,8 +67,7 @@ ENV CARGO_HOME=/home/tooling/.cargo \
 #RUN mkdir -p /home/tooling/.cargo && \
 RUN mkdir -p $RUSTUP_HOME $CARGO_HOME && \
     curl --proto '=https' --tlsv1.2 -sSfo rustup https://sh.rustup.rs && \
-    chmod +x rustup && \
-    mv rustup /usr/bin/ && \
+    chmod +x rustup && mv rustup /usr/bin/ && \
     rustup -y --no-modify-path --profile minimal -c rust-src -c rust-analysis -c rls
 
 # A last pass to make sure that an arbitrary user can write in $HOME
