@@ -1,4 +1,5 @@
 FROM registry.redhat.io/devspaces/udi-rhel9:3.25.0
+# https://catalog.redhat.com/en/software/containers/devspaces/udi-rhel9/673f8460bbf0c33aca0fe316#containerfile
 
 ARG TARGETARCH
 USER root

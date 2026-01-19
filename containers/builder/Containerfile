@@ -1,10 +1,30 @@
-FROM ghcr.io/rhadp/base:latest
+FROM registry.redhat.io/devspaces/udi-rhel9:3.25.0
+# https://catalog.redhat.com/en/software/containers/devspaces/udi-rhel9/673f8460bbf0c33aca0fe316#containerfile
 
 USER root
 
-# $PROFILE_EXT contains all additions made to the bash environment
-ENV PROFILE_EXT=/etc/profile.d/udi_environment.sh
-RUN touch ${PROFILE_EXT} && chown user ${PROFILE_EXT}
+# install centos stream & fedora repos
+ENV CENTOS_RELEASE=9.0-34
+RUN if [ "$TARGETARCH" = "arm64" ]; then \
+        dnf install -y --setopt=tsflags=nodocs \
+        https://mirror.stream.centos.org/9-stream/BaseOS/aarch64/os/Packages/centos-stream-repos-${CENTOS_RELEASE}.el9.noarch.rpm \
+        https://mirror.stream.centos.org/9-stream/BaseOS/aarch64/os/Packages/centos-gpg-keys-${CENTOS_RELEASE}.el9.noarch.rpm; \
+    else \
+        dnf install -y --setopt=tsflags=nodocs \
+        https://mirror.stream.centos.org/9-stream/BaseOS/x86_64/os/Packages/centos-stream-repos-${CENTOS_RELEASE}.el9.noarch.rpm \
+        https://mirror.stream.centos.org/9-stream/BaseOS/x86_64/os/Packages/centos-gpg-keys-${CENTOS_RELEASE}.el9.noarch.rpm; \
+    fi && \
+    dnf install -y --setopt=tsflags=nodocs \
+    https://dl.fedoraproject.org/pub/epel/epel-release-latest-9.noarch.rpm
+
+# install basic packages
+RUN dnf install -y --setopt=tsflags=nodocs \
+    python3.12 python3.12-devel python3-pip \
+    git jq yq \
+    nss_wrapper kmod openssh-clients nc stow \
+    fuse-overlayfs slirp4netns shadow-utils && \
+    dnf clean all && \
+    rm -rf /var/cache/dnf
 
 # install common development packages
 RUN dnf install -y --setopt=tsflags=nodocs \
@@ -22,6 +42,21 @@ RUN dnf install -y --setopt=tsflags=nodocs \
     dnf -y clean all --enablerepo='*' && \
     rm -rf /var/cache/dnf
 
+# python dependencies
+COPY --from=ghcr.io/astral-sh/uv:latest /uv  /bin/uv
+COPY --from=ghcr.io/astral-sh/uv:latest /uvx /bin/uvx
+
+# set the virtual environment for jumpstarter etc
+ENV UV_PYTHON=python3.12 VIRTUAL_ENV=/venv
+
+# install python dependencies
+COPY requirements.txt /tmp/requirements.txt
+RUN uv venv /venv && \
+    uv pip install -r /tmp/requirements.txt && \
+    rm -rf /tmp/requirements.txt && \
+    echo "alias python='uv run python'" >> /home/user/.bashrc && \
+    chgrp -R 0 /home && chmod -R g=u /home /etc/passwd /etc/group /etc/pki
+
 # already installed: go, python, java, node
 
 # install rust
@@ -29,13 +64,15 @@ ENV CARGO_HOME=/home/tooling/.cargo \
     RUSTUP_HOME=/home/tooling/.rustup \
     PATH=/home/tooling/.cargo/bin:${PATH}
 
-RUN mkdir -p /home/tooling/.cargo && \
-    mkdir -p /home/tooling/.rustup && \
+#RUN mkdir -p /home/tooling/.cargo && \
+RUN mkdir -p $RUSTUP_HOME $CARGO_HOME && \
     curl --proto '=https' --tlsv1.2 -sSfo rustup https://sh.rustup.rs && \
     chmod +x rustup && \
     mv rustup /usr/bin/ && \
     rustup -y --no-modify-path --profile minimal -c rust-src -c rust-analysis -c rls
 
-RUN chgrp -R 0 /home/user /home/tooling && chmod -R g=u /home/user /home/tooling
+# A last pass to make sure that an arbitrary user can write in $HOME
+RUN chgrp -R 0 /home && chmod -R g=u /home
 
+# back to the user
 USER 10001
