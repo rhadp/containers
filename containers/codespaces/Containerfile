@@ -24,12 +24,8 @@ RUN uv venv /venv && \
     echo "alias pip='uv pip'" >> /home/user/.bashrc && \
     echo "source /venv/bin/activate" >> /home/user/.bashrc 
 
-# init scripts, create directories, and set permissions in a single layer
-#COPY init-git ${INIT_SCRIPTS_DIR}/init-git
-
 # A last pass to make sure that an arbitrary user can write in $HOME
 RUN chgrp -R 0 /home && chmod -R g=u /home
-# chgrp -R 0 /home && chmod -R g=u /home /etc/passwd /etc/group /etc/pki
 
 # back to the user
 USER 10001

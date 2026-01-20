@@ -22,9 +22,15 @@ BUILD_ARGS ?= --build-arg TARGETARCH=$(shell uname -m | sed 's/x86_64/amd64/')
 .PHONY: help all build-all base builder runtime pipeline codespaces clean clean-all push-all
 
 # Build all images
-build-all: runtime builder pipeline codespaces
+build-all: update runtime builder pipeline codespaces
 	@echo "✅ All images built successfully!"
 
+update:
+	@echo "🔨 Updating base images..."
+	$(CONTAINER_TOOL) pull registry.access.redhat.com/ubi9/ubi:9.7
+	$(CONTAINER_TOOL) pull registry.redhat.io/devspaces/udi-rhel9:3.25.0
+	$(CONTAINER_TOOL) pull ghcr.io/astral-sh/uv
+	@echo "✅ Base images updated"
 
 # Build the runtime image
 runtime:
@@ -74,8 +80,9 @@ clean:
 # Clean up all related images including base images
 clean-all: clean
 	@echo "🧹 Cleaning up all related images..."
+	-$(CONTAINER_TOOL) rmi registry.access.redhat.com/ubi9/ubi:9.7  2>/dev/null || true
 	-$(CONTAINER_TOOL) rmi registry.redhat.io/devspaces/udi-rhel9:3.25.0 2>/dev/null || true
-	-$(CONTAINER_TOOL) rmi ghcr.io/astral-sh/uv:latest 2>/dev/null || true
+	-$(CONTAINER_TOOL) rmi ghcr.io/astral-sh/uv 2>/dev/null || true
 	-$(CONTAINER_TOOL) system prune -f 2>/dev/null || true
 	@echo "✅ All images cleaned"
 
