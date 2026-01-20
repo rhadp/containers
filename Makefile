@@ -27,7 +27,7 @@ build-all: runtime builder pipeline codespaces
 
 
 # Build the runtime image
-runtime: 
+runtime:
 	@echo "🔨 Building runtime image..."
 	$(CONTAINER_TOOL) build $(BUILD_ARGS) \
 		-f containers/runtime/Containerfile \
@@ -65,30 +65,17 @@ codespaces: builder
 # Clean up locally built images
 clean:
 	@echo "🧹 Cleaning up locally built images..."
-	-$(CONTAINER_TOOL) rmi $(RUNTIME_IMAGE):$(TAG) 2>/dev/null || true
 	-$(CONTAINER_TOOL) rmi $(CODESPACES_IMAGE):$(TAG) 2>/dev/null || true
 	-$(CONTAINER_TOOL) rmi $(PIPELINE_IMAGE):$(TAG) 2>/dev/null || true
 	-$(CONTAINER_TOOL) rmi $(BUILDER_IMAGE):$(TAG) 2>/dev/null || true
+	-$(CONTAINER_TOOL) rmi $(RUNTIME_IMAGE):$(TAG) 2>/dev/null || true
 	@echo "✅ Local images cleaned"
 
 # Clean up all related images including base images
 clean-all: clean
 	@echo "🧹 Cleaning up all related images..."
-	-$(CONTAINER_TOOL) rmi quay.io/devfile/base-developer-image:ubi9-latest 2>/dev/null || true
-	-$(CONTAINER_TOOL) rmi fedora:42 2>/dev/null || true
+	-$(CONTAINER_TOOL) rmi registry.redhat.io/devspaces/udi-rhel9:3.25.0 2>/dev/null || true
 	-$(CONTAINER_TOOL) rmi ghcr.io/astral-sh/uv:latest 2>/dev/null || true
 	-$(CONTAINER_TOOL) system prune -f 2>/dev/null || true
 	@echo "✅ All images cleaned"
 
-# Show image info
-info:
-	@echo "📊 Image Information:"
-	@echo "Builder:    $(BUILDER_IMAGE):$(TAG)"
-	@echo "Codespaces: $(CODESPACES_IMAGE):$(TAG)"
-	@echo "Runtime:    $(RUNTIME_IMAGE):$(TAG)"
-	@echo "Pipeline:   $(PIPELINE_IMAGE):$(TAG)"
-	@echo ""
-	@echo "Registry:   $(REGISTRY)"
-	@echo "Namespace:  $(NAMESPACE)"
-	@echo "Tag:        $(TAG)"
-	@echo "Tool:       $(CONTAINER_TOOL)"

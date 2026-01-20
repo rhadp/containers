@@ -31,9 +31,33 @@ RUN dnf install -y --setopt=tsflags=nodocs \
     dnf -y clean all --enablerepo='*' && \
     rm -rf /var/cache/dnf
 
-# install oc and kubectl
-ENV OC_VERSION=4.20 \
-    K8S_VERSION=1.33 KUBECONFIG=/home/user/.kube/config
+ENV HOME=/home/user \
+    OC_VERSION=4.20 \
+    K8S_VERSION=1.33 \
+    KUBECONFIG=/home/user/.kube/config \
+    UV_PYTHON=python3.12 \
+    VIRTUAL_ENV=/venv \
+    JUMPSTARTER_VERSION=main \
+    JUMPSTARTER_REPO=https://github.com/rhadp/jumpstarter
+
+# create directories, add user, and set permissions
+RUN mkdir -p /home/user /home/user/.kube /etc/jumpstarter/exporters /home/user/.config/jumpstarter/clients /opt && \
+    # add user and configure it
+    useradd -u 1000 -G wheel,root -d /home/user --shell /bin/bash -m user && \
+    # Bash-related files are backed up to /home/tooling/ in case they are deleted when persistUserHome is enabled.
+    #cp /home/user/.bashrc /home/tooling/.bashrc && \
+    #cp /home/user/.bash_profile /home/tooling/.bash_profile && \
+    for f in "${HOME}" "/etc/passwd" "/etc/group"; do \
+        echo "Changing permissions on ${f}" && chgrp -R 0 ${f} && \
+        chmod -R g+rwX ${f}; \
+    done && \
+    # Generate passwd.template
+    cat /etc/passwd | \
+    sed s#user:x.*#user:x:\${USER_ID}:\${GROUP_ID}::\${HOME}:/bin/bash#g \
+    > ${HOME}/passwd.template && \
+    cat /etc/group | \
+    sed s#root:x:0:#root:x:0:0,\${USER_ID}:#g \
+    > ${HOME}/group.template
 
 # oc client
 RUN if [ "$TARGETARCH" = "arm64" ]; then \
@@ -60,23 +84,28 @@ dnf install --setopt=tsflags=nodocs -y kubectl
 curl -sSL -o ~/.kubectl_aliases https://raw.githubusercontent.com/ahmetb/kubectl-alias/master/.kubectl_aliases
 EOF
 
-# python dependencies
+# install uv
 COPY --from=ghcr.io/astral-sh/uv:latest /uv  /bin/uv
 COPY --from=ghcr.io/astral-sh/uv:latest /uvx /bin/uvx
 
-# set the virtual environment for jumpstarter etc
-ENV UV_PYTHON=python3.12 VIRTUAL_ENV=/venv
-
-# install python dependencies, jumpstarter, create directories, and set permissions in a single layer
-ENV JUMPSTARTER_VERSION=main \
-    JUMPSTARTER_REPO=https://github.com/rhadp/jumpstarter
+# install jumpstarter & other python dependencies
 COPY requirements.txt /tmp/requirements.txt
+
 RUN uv venv /venv && \
     uv pip install "git+${JUMPSTARTER_REPO}@${JUMPSTARTER_VERSION}#subdirectory=packages/jumpstarter-all" && \
     uv pip install -r /tmp/requirements.txt && \
     rm -rf /tmp/requirements.txt && \
-    mkdir -p /etc/jumpstarter/exporters && \
-    mkdir -p /home/user/.config/jumpstarter/clients/ && \
-    chgrp -R 0 /home/user && chmod -R g=u /home/user
+    echo "alias python='uv run python'" >> /home/user/.bashrc && \
+    echo "alias pip='uv pip'" >> /home/user/.bashrc && \
+    echo "source /venv/bin/activate" >> /home/user/.bashrc 
+
+# clean up
+RUN chmod 755 /usr/local/bin/* && \
+    chmod -R g+rwX ${HOME}
+# A last pass to make sure that an arbitrary user can write in $HOME
+RUN chgrp -R 0 /home && chmod -R g=u /home
 
 USER 10001
+ENV HOME=/home/user
+WORKDIR /home/user
+CMD tail -f /dev/null

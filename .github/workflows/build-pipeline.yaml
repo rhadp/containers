@@ -2,10 +2,6 @@ name: "build the pipeline/tekton container image"
 on:
   workflow_dispatch:
 
-  #push:
-  #  branches:
-  #    - 'develop'
-
 jobs:
   build-pipeline-container:
     uses: ./.github/workflows/build-container.yaml

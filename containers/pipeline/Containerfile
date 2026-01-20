@@ -9,7 +9,9 @@ COPY s3-upload.py /home/user/s3-upload.py
 # install additional python dependencies and set permissions in a single layer
 COPY requirements.txt /tmp/requirements.txt
 RUN uv pip install -r /tmp/requirements.txt && \
-    rm -rf /tmp/requirements.txt && \
-    chgrp -R 0 /home/user && chmod -R g=u /home/user
+    rm -rf /tmp/requirements.txt
+
+# A last pass to make sure that an arbitrary user can write in $HOME
+RUN chgrp -R 0 /home && chmod -R g=u /home
 
 USER 10001

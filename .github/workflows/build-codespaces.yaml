@@ -2,10 +2,6 @@ name: build the codespaces container image
 on:
   workflow_dispatch:
 
-  #push:
-  #  branches:
-  #    - 'develop'
-
 jobs:
   build-codespaces-container:
     uses: ./.github/workflows/build-container.yaml

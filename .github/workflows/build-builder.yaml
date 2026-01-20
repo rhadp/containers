@@ -2,10 +2,6 @@ name: build the builder container image
 on:
   workflow_dispatch:
 
-  #push:
-  #  branches:
-  #    - 'develop'
-
 jobs:
   build-builder-container:
     uses: ./.github/workflows/build-container.yaml

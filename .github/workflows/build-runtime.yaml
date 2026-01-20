@@ -2,10 +2,6 @@ name: build the runtime container image
 on:
   workflow_dispatch:
 
-  #push:
-  #  branches:
-  #    - 'develop'
-
 jobs:
   build-runtime-container:
     uses: ./.github/workflows/build-container.yaml

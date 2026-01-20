@@ -10,21 +10,8 @@ on:
       - 'main'
 
 jobs:
-#  build-base:
-#    name: "building 'base'"
-#    uses: ./.github/workflows/build-container.yaml
-#    with:
-#      container_name: base
-#    secrets: inherit
-#    permissions:
-#      packages: write
-#      contents: read
-#      id-token: write
-#      attestations: write
-
   build-builder:
     name: "building 'builder'"
-    #needs: [build-base]
     uses: ./.github/workflows/build-container.yaml
     with:
       container_name: builder
