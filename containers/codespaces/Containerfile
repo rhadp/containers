@@ -1,6 +1,35 @@
-FROM ghcr.io/rhadp/builder:latest
+FROM registry.redhat.io/devspaces/udi-rhel9:3.25.0
+# https://catalog.redhat.com/en/software/containers/devspaces/udi-rhel9/673f8460bbf0c33aca0fe316#containerfile
 
 USER root
+
+# install centos stream & fedora repos
+ENV CENTOS_RELEASE=9.0-34
+RUN if [ "$TARGETARCH" = "arm64" ]; then \
+        dnf install -y --setopt=tsflags=nodocs \
+        https://mirror.stream.centos.org/9-stream/BaseOS/aarch64/os/Packages/centos-stream-repos-${CENTOS_RELEASE}.el9.noarch.rpm \
+        https://mirror.stream.centos.org/9-stream/BaseOS/aarch64/os/Packages/centos-gpg-keys-${CENTOS_RELEASE}.el9.noarch.rpm; \
+    else \
+        dnf install -y --setopt=tsflags=nodocs \
+        https://mirror.stream.centos.org/9-stream/BaseOS/x86_64/os/Packages/centos-stream-repos-${CENTOS_RELEASE}.el9.noarch.rpm \
+        https://mirror.stream.centos.org/9-stream/BaseOS/x86_64/os/Packages/centos-gpg-keys-${CENTOS_RELEASE}.el9.noarch.rpm; \
+    fi && \
+    dnf install -y --setopt=tsflags=nodocs \
+    https://dl.fedoraproject.org/pub/epel/epel-release-latest-9.noarch.rpm
+
+# install basic packages and common development dependencies
+RUN dnf install -y --setopt=tsflags=nodocs \
+    python3.12 python3.12-devel python3-pip \
+    git jq yq \
+    nss_wrapper kmod openssh-clients nc stow \
+    fuse-overlayfs slirp4netns shadow-utils \
+    patch lsof redhat-rpm-config \
+    unzip wget bzip2 zip \
+    gdb cmake automake autoconf make && \
+    # clean up
+    dnf -y clean all --enablerepo='*' && \
+    rm -rf /var/cache/dnf
+
 
 # install uv
 COPY --from=ghcr.io/astral-sh/uv:latest /uv  /bin/uv

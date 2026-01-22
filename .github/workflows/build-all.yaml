@@ -1,4 +1,4 @@
-name: build all container images
+name: build all containers
 on:
   workflow_dispatch:
 
@@ -12,7 +12,7 @@ on:
 jobs:
   build-builder:
     name: "building 'builder'"
-    uses: ./.github/workflows/build-container.yaml
+    uses: ./.github/workflows/build.yaml
     with:
       container_name: builder
     secrets: inherit
@@ -24,8 +24,8 @@ jobs:
 
   build-codespaces:
     name: "building 'codespaces'"
-    needs: [build-builder]
-    uses: ./.github/workflows/build-container.yaml
+    #needs: [build-builder]
+    uses: ./.github/workflows/build.yaml
     with:
       container_name: codespaces
     secrets: inherit
@@ -37,7 +37,7 @@ jobs:
 
   build-runtime:
     name: "building 'runtime'"
-    uses: ./.github/workflows/build-container.yaml
+    uses: ./.github/workflows/build.yaml
     with:
       container_name: runtime
     secrets: inherit
@@ -50,7 +50,7 @@ jobs:
   build-pipeline:
     name: "building 'pipeline'"
     needs: [build-runtime]
-    uses: ./.github/workflows/build-container.yaml
+    uses: ./.github/workflows/build.yaml
     with:
       container_name: pipeline
     secrets: inherit

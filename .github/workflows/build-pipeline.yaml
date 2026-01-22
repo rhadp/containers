@@ -1,10 +1,10 @@
-name: "build the pipeline/tekton container image"
+name: build pipeline container
 on:
   workflow_dispatch:
 
 jobs:
   build-pipeline-container:
-    uses: ./.github/workflows/build-container.yaml
+    uses: ./.github/workflows/build.yaml
     with:
       container_name: pipeline
     secrets: inherit

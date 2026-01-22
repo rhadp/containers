@@ -1,10 +1,10 @@
-name: build the runtime container image
+name: build runtime container
 on:
   workflow_dispatch:
 
 jobs:
   build-runtime-container:
-    uses: ./.github/workflows/build-container.yaml
+    uses: ./.github/workflows/build.yaml
     with:
       container_name: runtime
     secrets: inherit

@@ -1,10 +1,10 @@
-name: build the builder container image
+name: build builder container
 on:
   workflow_dispatch:
 
 jobs:
   build-builder-container:
-    uses: ./.github/workflows/build-container.yaml
+    uses: ./.github/workflows/build.yaml
     with:
       container_name: builder
     secrets: inherit

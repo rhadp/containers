@@ -60,7 +60,7 @@ builder:
 	@echo "✅ Builder image built: $(BUILDER_IMAGE):$(TAG)"
 
 # Build the codespaces image (depends on builder)
-codespaces: builder
+codespaces: 
 	@echo "🔨 Building codespaces image..."
 	$(CONTAINER_TOOL) build $(BUILD_ARGS) \
 		-f containers/codespaces/Containerfile \

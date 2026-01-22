@@ -1,10 +1,10 @@
-name: build the codespaces container image
+name: build codespaces container
 on:
   workflow_dispatch:
 
 jobs:
   build-codespaces-container:
-    uses: ./.github/workflows/build-container.yaml
+    uses: ./.github/workflows/build.yaml
     with:
       container_name: codespaces
     secrets: inherit

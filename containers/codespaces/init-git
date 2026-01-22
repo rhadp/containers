@@ -1,5 +1,0 @@
-# config git
-USER_EMAIL=`cat /config/user/profile/email | sed -E 's/^([^@]+@[^@]+\.[^@]+)@.*/\1/'`
-USER_NAME=`cat /config/user/profile/name`
-git config --global user.email $USER_EMAIL
-git config --global user.name $USER_NAME
