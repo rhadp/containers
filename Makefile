@@ -81,6 +81,7 @@ clean:
 clean-all: clean
 	@echo "🧹 Cleaning up all related images..."
 	-$(CONTAINER_TOOL) rmi registry.access.redhat.com/ubi9/ubi:9.7  2>/dev/null || true
+	-$(CONTAINER_TOOL) rmi registry.access.redhat.com/ubi9/s2i-core:9.7 2>/dev/null || true
 	-$(CONTAINER_TOOL) rmi registry.redhat.io/devspaces/udi-rhel9:3.25.0 2>/dev/null || true
 	-$(CONTAINER_TOOL) rmi ghcr.io/astral-sh/uv 2>/dev/null || true
 	-$(CONTAINER_TOOL) system prune -f 2>/dev/null || true

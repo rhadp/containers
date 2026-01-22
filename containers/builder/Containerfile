@@ -1,10 +1,12 @@
-FROM registry.redhat.io/devspaces/udi-rhel9:3.25.0
-# https://catalog.redhat.com/en/software/containers/devspaces/udi-rhel9/673f8460bbf0c33aca0fe316#containerfile
+FROM registry.access.redhat.com/ubi9/s2i-core:9.7
+# https://catalog.redhat.com/en/software/containers/ubi9/s2i-core/61fb9fa7891fad8774b86e06?architecture=arm64&image=#containerfile
 
 USER root
 
+ENV CENTOS_RELEASE=9.0-34 \
+    NODEJS_VER=22
+
 # install centos stream & fedora repos
-ENV CENTOS_RELEASE=9.0-34
 RUN if [ "$TARGETARCH" = "arm64" ]; then \
         dnf install -y --setopt=tsflags=nodocs \
         https://mirror.stream.centos.org/9-stream/BaseOS/aarch64/os/Packages/centos-stream-repos-${CENTOS_RELEASE}.el9.noarch.rpm \
@@ -17,32 +19,51 @@ RUN if [ "$TARGETARCH" = "arm64" ]; then \
     dnf install -y --setopt=tsflags=nodocs \
     https://dl.fedoraproject.org/pub/epel/epel-release-latest-9.noarch.rpm
 
-# install basic packages
+
+# from s2i-base containerfile
+# https://catalog.redhat.com/software/containers/ubi9/s2i-base/61fba02e153d30bcbfa96ef3#containerfile
+RUN yum -y module enable nodejs:$NODEJS_VER && \
+    INSTALL_PKGS="autoconf \
+    automake \
+    bzip2 \
+    gcc-c++ \
+    gd-devel \
+    gdb \
+    git \
+    libcurl-devel \
+    libpq-devel \
+    libxml2-devel \
+    libxslt-devel \
+    lsof \
+    make \
+    openssl-devel \
+    patch \
+    procps-ng \
+    npm \
+    redhat-rpm-config \
+    sqlite-devel \
+    unzip \
+    wget \
+    which \
+    zlib-devel" && \
+    yum install -y --setopt=tsflags=nodocs $INSTALL_PKGS && \
+    rpm -V $INSTALL_PKGS && \
+    node -v | grep -qe "^v$NODEJS_VER\." && echo "Found VERSION $NODEJS_VER" && \
+    yum -y clean all --enablerepo='*'
+
+# install common development packages
 RUN dnf install -y --setopt=tsflags=nodocs \
     python3.12 python3.12-devel python3-pip \
     git jq yq \
     nss_wrapper kmod openssh-clients nc stow \
-    fuse-overlayfs slirp4netns shadow-utils
-
-# install common development packages
-RUN dnf install -y --setopt=tsflags=nodocs \
-    autoconf patch lsof redhat-rpm-config \
-    openssl-devel libcurl-devel libxml2-devel libxslt-devel zlib-devel \
-    unzip wget bzip2 zip \
-    llvm-toolset \
-    gdb cmake automake autoconf make
-
-# install c/c++ development packages
-RUN dnf install -y --setopt=tsflags=nodocs \
-    gcc gcc-c++ clang clang-libs clang-tools-extra 
-
-# already installed: go, python, java, node
+    llvm-toolset cmake \
+    clang clang-libs clang-tools-extra
 
 # install rust
-ENV CARGO_HOME=/home/tooling/.cargo \
-    RUSTUP_HOME=/home/tooling/.rustup \
-    PATH=/home/tooling/.cargo/bin:${PATH}
-
+ENV CARGO_HOME=${APP_ROOT}/.cargo \
+    RUSTUP_HOME=${APP_ROOT}/.rustup \
+    PATH=${APP_ROOT}/.cargo/bin:${PATH}
+    
 RUN mkdir -p $RUSTUP_HOME $CARGO_HOME && \
     curl --proto '=https' --tlsv1.2 -sSfo rustup https://sh.rustup.rs && \
     chmod +x rustup && mv rustup /usr/bin/ && \
@@ -52,8 +73,5 @@ RUN mkdir -p $RUSTUP_HOME $CARGO_HOME && \
 RUN dnf -y clean all --enablerepo='*' && \
     rm -rf /var/cache/dnf
 
-# A last pass to make sure that an arbitrary user can write in $HOME
-RUN chgrp -R 0 /home && chmod -R g=u /home
-
-# back to the user
-USER 10001
+# Reset permissions of modified directories
+RUN rpm-file-permissions && chown -R 1001:0 ${APP_ROOT}
