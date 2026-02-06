@@ -52,12 +52,14 @@ RUN yum -y module enable nodejs:$NODEJS_VER && \
     yum -y clean all --enablerepo='*'
 
 # install common development packages
-RUN dnf install -y --setopt=tsflags=nodocs \
+RUN dnf config-manager --set-enabled crb && \
+    dnf install -y --setopt=tsflags=nodocs \
     python3.12 python3.12-devel python3-pip \
     git jq yq \
     nss_wrapper kmod openssh-clients nc stow \
     llvm-toolset cmake \
-    clang clang-libs clang-tools-extra
+    clang clang-libs clang-tools-extra \
+    protobuf-compiler protobuf-devel
 
 # install rust
 ENV CARGO_HOME=${APP_ROOT}/.cargo \
