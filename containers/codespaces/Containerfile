@@ -40,7 +40,7 @@ ENV UV_PYTHON=python3.12 VIRTUAL_ENV=/venv
 
 # install this repository's version of jumpstarter
 ENV JUMPSTARTER_VERSION=main \
-    JUMPSTARTER_REPO=https://github.com/rhadp/jumpstarter
+    JUMPSTARTER_REPO=https://github.com/jumpstarter-dev/jumpstarter
 
 # install jumpstarter & other python dependencies
 COPY requirements.txt /tmp/requirements.txt

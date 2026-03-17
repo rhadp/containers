@@ -38,7 +38,7 @@ ENV HOME=/home/user \
     UV_PYTHON=python3.12 \
     VIRTUAL_ENV=/venv \
     JUMPSTARTER_VERSION=main \
-    JUMPSTARTER_REPO=https://github.com/rhadp/jumpstarter
+    JUMPSTARTER_REPO=https://github.com/jumpstarter-dev/jumpstarter
 
 # create directories, add user, and set permissions
 RUN mkdir -p /home/user /home/user/.kube /etc/jumpstarter/exporters /home/user/.config/jumpstarter/clients /opt && \
