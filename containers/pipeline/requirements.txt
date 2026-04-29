@@ -10,9 +10,3 @@ google-cloud-compute
 google-auth-oauthlib
 pylint
 pyyaml
-# Azure SDK packages (lightweight alternative to azure-cli)
-azure-identity
-azure-mgmt-compute
-azure-mgmt-resource
-azure-mgmt-network
-azure-mgmt-storage

@@ -4,7 +4,7 @@ ARG TARGETARCH
 USER root
 
 # add additional scripts
-COPY s3-upload.py /home/user/s3-upload.py
+#COPY s3-upload.py /home/user/s3-upload.py
 
 # install additional python dependencies and set permissions in a single layer
 COPY requirements.txt /tmp/requirements.txt

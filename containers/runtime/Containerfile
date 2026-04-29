@@ -4,7 +4,7 @@ ARG TARGETARCH
 USER root
 
 # install centos stream & fedora repos
-ENV CENTOS_RELEASE=9.0-34
+ENV CENTOS_RELEASE=9.0-36
 RUN if [ "$TARGETARCH" = "arm64" ]; then \
         dnf install -y --setopt=tsflags=nodocs \
         https://mirror.stream.centos.org/9-stream/BaseOS/aarch64/os/Packages/centos-stream-repos-${CENTOS_RELEASE}.el9.noarch.rpm \
@@ -32,8 +32,8 @@ RUN dnf install -y --setopt=tsflags=nodocs \
     rm -rf /var/cache/dnf
 
 ENV HOME=/home/user \
-    OC_VERSION=4.20 \
-    K8S_VERSION=1.33 \
+    OC_VERSION=4.21 \
+    K8S_VERSION=1.34 \
     KUBECONFIG=/home/user/.kube/config \
     UV_PYTHON=python3.12 \
     VIRTUAL_ENV=/venv \

@@ -3,8 +3,7 @@ FROM registry.access.redhat.com/ubi9/s2i-core:9.7
 
 USER root
 
-ENV CENTOS_RELEASE=9.0-34 \
-    NODEJS_VER=22
+ENV CENTOS_RELEASE=9.0-36
 
 # install centos stream & fedora repos
 RUN if [ "$TARGETARCH" = "arm64" ]; then \
@@ -19,47 +18,30 @@ RUN if [ "$TARGETARCH" = "arm64" ]; then \
     dnf install -y --setopt=tsflags=nodocs \
     https://dl.fedoraproject.org/pub/epel/epel-release-latest-9.noarch.rpm
 
-
-# from s2i-base containerfile
-# https://catalog.redhat.com/software/containers/ubi9/s2i-base/61fba02e153d30bcbfa96ef3#containerfile
-RUN yum -y module enable nodejs:$NODEJS_VER && \
-    INSTALL_PKGS="autoconf \
-    automake \
-    bzip2 \
-    gcc-c++ \
-    gd-devel \
-    gdb \
-    git \
-    libcurl-devel \
-    libpq-devel \
-    libxml2-devel \
-    libxslt-devel \
-    lsof \
-    make \
-    openssl-devel \
-    patch \
-    procps-ng \
-    npm \
-    redhat-rpm-config \
-    sqlite-devel \
-    unzip \
-    wget \
-    which \
-    zlib-devel" && \
-    yum install -y --setopt=tsflags=nodocs $INSTALL_PKGS && \
-    rpm -V $INSTALL_PKGS && \
-    node -v | grep -qe "^v$NODEJS_VER\." && echo "Found VERSION $NODEJS_VER" && \
-    yum -y clean all --enablerepo='*'
-
-# install common development packages
-RUN dnf config-manager --set-enabled crb && \
-    dnf install -y --setopt=tsflags=nodocs \
+# install basic packages and common development dependencies
+RUN dnf install -y --setopt=tsflags=nodocs \
     python3.12 python3.12-devel python3-pip \
     git jq yq \
     nss_wrapper kmod openssh-clients nc stow \
-    llvm-toolset cmake \
-    clang clang-libs clang-tools-extra \
-    protobuf-compiler protobuf-devel
+    fuse-overlayfs slirp4netns shadow-utils \
+    patch lsof redhat-rpm-config procps-ng \
+    unzip wget bzip2 zip which
+
+# install development dependencies
+RUN dnf install -y epel-release && \
+    dnf install -y --setopt=tsflags=nodocs \
+        gdb gd-devel cmake automake autoconf make \
+        gcc gcc-c++ \
+        glibc-devel \
+        openssl-devel \
+        sqlite-devel \
+        zlib-devel libcurl-devel libpq-devel \
+        libxml2-devel libxslt-devel 
+
+# install node
+RUN dnf install -y epel-release && \
+    dnf install -y --setopt=tsflags=nodocs \
+        npm 
 
 # install rust
 ENV CARGO_HOME=${APP_ROOT}/.cargo \
@@ -70,6 +52,13 @@ RUN mkdir -p $RUSTUP_HOME $CARGO_HOME && \
     curl --proto '=https' --tlsv1.2 -sSfo rustup https://sh.rustup.rs && \
     chmod +x rustup && mv rustup /usr/bin/ && \
     rustup -y --no-modify-path --profile minimal -c rust-src -c rust-analysis -c rls
+
+# install uv
+COPY --from=ghcr.io/astral-sh/uv:latest /uv  /bin/uv
+COPY --from=ghcr.io/astral-sh/uv:latest /uvx /bin/uvx
+
+# set the virtual environment for jumpstarter etc
+ENV UV_PYTHON=python3.12 VIRTUAL_ENV=/venv
 
 # clean up
 RUN dnf -y clean all --enablerepo='*' && \

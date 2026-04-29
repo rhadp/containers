@@ -1,10 +1,11 @@
-FROM registry.redhat.io/devspaces/udi-rhel9:3.25.0
+FROM registry.redhat.io/devspaces/udi-rhel9:3.27.1
 # https://catalog.redhat.com/en/software/containers/devspaces/udi-rhel9/673f8460bbf0c33aca0fe316#containerfile
 
 USER root
 
 # install centos stream & fedora repos
-ENV CENTOS_RELEASE=9.0-34
+ENV CENTOS_RELEASE=9.0-36
+
 RUN if [ "$TARGETARCH" = "arm64" ]; then \
         dnf install -y --setopt=tsflags=nodocs \
         https://mirror.stream.centos.org/9-stream/BaseOS/aarch64/os/Packages/centos-stream-repos-${CENTOS_RELEASE}.el9.noarch.rpm \
@@ -23,13 +24,34 @@ RUN dnf install -y --setopt=tsflags=nodocs \
     git jq yq \
     nss_wrapper kmod openssh-clients nc stow \
     fuse-overlayfs slirp4netns shadow-utils \
-    patch lsof redhat-rpm-config \
-    unzip wget bzip2 zip \
-    gdb cmake automake autoconf make && \
-    # clean up
-    dnf -y clean all --enablerepo='*' && \
-    rm -rf /var/cache/dnf
+    patch lsof redhat-rpm-config procps-ng \
+    unzip wget bzip2 zip which
 
+# install development dependencies
+RUN dnf install -y epel-release && \
+    dnf install -y --setopt=tsflags=nodocs \
+        gdb gd-devel cmake automake autoconf make \
+        gcc gcc-c++ \
+        glibc-devel \
+        openssl-devel \
+        sqlite-devel \
+        zlib-devel libcurl-devel libpq-devel \
+        libxml2-devel libxslt-devel 
+
+# install node
+RUN dnf install -y epel-release && \
+    dnf install -y --setopt=tsflags=nodocs \
+        npm 
+
+# install rust
+ENV CARGO_HOME=${APP_ROOT}/.cargo \
+    RUSTUP_HOME=${APP_ROOT}/.rustup \
+    PATH=${APP_ROOT}/.cargo/bin:${PATH}
+    
+RUN mkdir -p $RUSTUP_HOME $CARGO_HOME && \
+    curl --proto '=https' --tlsv1.2 -sSfo rustup https://sh.rustup.rs && \
+    chmod +x rustup && mv rustup /usr/bin/ && \
+    rustup -y --no-modify-path --profile minimal -c rust-src -c rust-analysis -c rls
 
 # install uv
 COPY --from=ghcr.io/astral-sh/uv:latest /uv  /bin/uv
@@ -52,6 +74,13 @@ RUN uv venv /venv && \
     echo "alias python='uv run python'" >> /home/user/.bashrc && \
     echo "alias pip='uv pip'" >> /home/user/.bashrc && \
     echo "source /venv/bin/activate" >> /home/user/.bashrc 
+
+# install caib
+RUN curl -sSL https://raw.githubusercontent.com/centos-automotive-suite/automotive-dev-operator/v0.1.0/hack/install-caib.sh | bash -s -- v0.1.0
+
+# clean up
+RUN dnf -y clean all --enablerepo='*' && \
+    rm -rf /var/cache/dnf
 
 # A last pass to make sure that an arbitrary user can write in $HOME
 RUN chgrp -R 0 /home && chmod -R g=u /home
