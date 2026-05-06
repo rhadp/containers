@@ -91,6 +91,7 @@ COPY --from=ghcr.io/astral-sh/uv:latest /uvx /bin/uvx
 # install jumpstarter & other python dependencies
 COPY requirements.txt /tmp/requirements.txt
 
+# install patched version of jumpstarter
 RUN uv venv /venv && \
     uv pip install "git+${JUMPSTARTER_REPO}@${JUMPSTARTER_VERSION}#subdirectory=python/packages/jumpstarter-all" && \
     uv pip install -r /tmp/requirements.txt && \
@@ -98,6 +99,14 @@ RUN uv venv /venv && \
     echo "alias python='uv run python'" >> /home/user/.bashrc && \
     echo "alias pip='uv pip'" >> /home/user/.bashrc && \
     echo "source /venv/bin/activate" >> /home/user/.bashrc 
+
+# install the Fast Flash Tool https://github.com/jumpstarter-dev/fls
+RUN if [ "$TARGETARCH" = "arm64" ]; then \
+        curl -L https://github.com/jumpstarter-dev/fls/releases/download/0.2.0/fls-aarch64-linux-musl -o /usr/local/bin/fls; \
+    else \
+        curl -L https://github.com/jumpstarter-dev/fls/releases/download/0.2.0/fls-x86_64-linux -o /usr/local/bin/fls; \
+    fi  && \
+    chmod +x /usr/local/bin/fls
 
 # clean up
 RUN chmod 755 /usr/local/bin/* && \
