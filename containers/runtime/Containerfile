@@ -27,8 +27,8 @@ RUN dnf install -y --setopt=tsflags=nodocs \
     qemu-kvm qemu-img libvirt \
     "@virtualization-hypervisor" "@virtualization-client" "@virtualization-platform" "@virtualization-tools" \
     virt-install virt-viewer \
-    genisoimage && \
-    tpm2-tools swtpm swtpm-tools && \
+    genisoimage \
+    swtpm swtpm-tools tpm2-tools && \
     dnf -y clean all --enablerepo='*' && \
     rm -rf /var/cache/dnf
 
