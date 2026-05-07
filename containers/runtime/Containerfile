@@ -28,6 +28,7 @@ RUN dnf install -y --setopt=tsflags=nodocs \
     "@virtualization-hypervisor" "@virtualization-client" "@virtualization-platform" "@virtualization-tools" \
     virt-install virt-viewer \
     genisoimage && \
+    tpm2-tools swtpm swtpm-tools && \
     dnf -y clean all --enablerepo='*' && \
     rm -rf /var/cache/dnf
 
@@ -108,6 +109,10 @@ RUN if [ "$TARGETARCH" = "arm64" ]; then \
     fi  && \
     chmod +x /usr/local/bin/fls
 
+# install swtpm
+RUN mkdir -p /var/lib/swtpm-localca /tmp/swtpm
+COPY entrypoint.sh /usr/local/bin/entrypoint.sh
+
 # clean up
 RUN chmod 755 /usr/local/bin/* && \
     chmod -R g+rwX ${HOME}
@@ -117,4 +122,6 @@ RUN chgrp -R 0 /home && chmod -R g=u /home
 USER 10001
 ENV HOME=/home/user
 WORKDIR /home/user
-CMD tail -f /dev/null
+ENV TPM2TOOLS_TCTI="swtpm:host=127.0.0.1,port=2321"
+ENTRYPOINT ["entrypoint.sh"]
+CMD ["tail", "-f", "/dev/null"]
