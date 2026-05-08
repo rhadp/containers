@@ -53,6 +53,21 @@ RUN mkdir -p $RUSTUP_HOME $CARGO_HOME && \
     chmod +x rustup && mv rustup /usr/bin/ && \
     rustup -y --no-modify-path --profile minimal -c rust-src -c rust-analysis -c rls
 
+# install protobuf compiler
+RUN mkdir -p /home/tooling/protobuf && \
+    if [ "$TARGETARCH" = "arm64" ]; then \
+        URL=$(curl -s https://api.github.com/repos/protocolbuffers/protobuf/releases/latest \
+        | jq -r '.assets[] | select(.name | endswith("linux-aarch_64.zip")) | .browser_download_url') && \
+        curl -LO "$URL"; \
+    else \
+        URL=$(curl -s https://api.github.com/repos/protocolbuffers/protobuf/releases/latest \
+        | jq -r '.assets[] | select(.name | endswith("linux-x86_64.zip")) | .browser_download_url') && \
+        curl -LO "$URL"; \
+    fi && \
+    unzip "$(basename "$URL")" -d "/home/tooling/protobuf"
+ENV PATH="/home/tooling/protobuf/bin:$PATH" \
+    PROTOBUF_HOME="/home/tooling/protobuf"
+
 # install uv
 COPY --from=ghcr.io/astral-sh/uv:latest /uv  /bin/uv
 COPY --from=ghcr.io/astral-sh/uv:latest /uvx /bin/uvx
