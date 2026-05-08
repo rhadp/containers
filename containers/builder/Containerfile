@@ -3,10 +3,11 @@ FROM registry.access.redhat.com/ubi9/s2i-core:9.7
 
 USER root
 
-ENV CENTOS_RELEASE=9.0-36
+ENV CENTOS_RELEASE=9.0-36 \
+    ARCH=${TARGETARCH:-arm64}
 
 # install centos stream & fedora repos
-RUN if [ "$TARGETARCH" = "arm64" ]; then \
+RUN if [ "$ARCH" = "arm64" ]; then \
         dnf install -y --setopt=tsflags=nodocs \
         https://mirror.stream.centos.org/9-stream/BaseOS/aarch64/os/Packages/centos-stream-repos-${CENTOS_RELEASE}.el9.noarch.rpm \
         https://mirror.stream.centos.org/9-stream/BaseOS/aarch64/os/Packages/centos-gpg-keys-${CENTOS_RELEASE}.el9.noarch.rpm; \
@@ -55,7 +56,7 @@ RUN mkdir -p $RUSTUP_HOME $CARGO_HOME && \
 
 # install protobuf compiler
 RUN mkdir -p /home/tooling/protobuf && \
-    if [ "$TARGETARCH" = "arm64" ]; then \
+    if [ "$ARCH" = "arm64" ]; then \
         URL=$(curl -s https://api.github.com/repos/protocolbuffers/protobuf/releases/latest \
         | jq -r '.assets[] | select(.name | endswith("linux-aarch_64.zip")) | .browser_download_url') && \
         curl -LO "$URL"; \
