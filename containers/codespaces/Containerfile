@@ -4,7 +4,8 @@ FROM registry.redhat.io/devspaces/udi-rhel9:3.27.1
 USER root
 
 # install centos stream & fedora repos
-ENV CENTOS_RELEASE=9.0-36
+ENV CENTOS_RELEASE=9.0-36 \
+    APP_ROOT=/home/tooling
 
 RUN if [ "$TARGETARCH" = "arm64" ]; then \
         dnf install -y --setopt=tsflags=nodocs \

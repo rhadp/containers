@@ -3,7 +3,8 @@ FROM registry.access.redhat.com/ubi9/s2i-core:9.7
 
 USER root
 
-ENV CENTOS_RELEASE=9.0-36
+ENV CENTOS_RELEASE=9.0-36 \
+    APP_ROOT=/home/tooling
 
 # install centos stream & fedora repos
 RUN if [ "$TARGETARCH" = "arm64" ]; then \
