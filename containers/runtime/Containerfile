@@ -4,8 +4,10 @@ ARG TARGETARCH
 USER root
 
 # install centos stream & fedora repos
-ENV CENTOS_RELEASE=9.0-36
-RUN if [ "$TARGETARCH" = "arm64" ]; then \
+ENV CENTOS_RELEASE=9.0-36 \
+    ARCH=${TARGETARCH:-arm64}
+
+RUN if [ "$ARCH" = "arm64" ]; then \
         dnf install -y --setopt=tsflags=nodocs \
         https://mirror.stream.centos.org/9-stream/BaseOS/aarch64/os/Packages/centos-stream-repos-${CENTOS_RELEASE}.el9.noarch.rpm \
         https://mirror.stream.centos.org/9-stream/BaseOS/aarch64/os/Packages/centos-gpg-keys-${CENTOS_RELEASE}.el9.noarch.rpm; \
@@ -61,7 +63,7 @@ RUN mkdir -p /home/user /home/user/.kube /etc/jumpstarter/exporters /home/user/.
     > ${HOME}/group.template
 
 # oc client
-RUN if [ "$TARGETARCH" = "arm64" ]; then \
+RUN if [ "$ARCH" = "arm64" ]; then \
         curl -L https://mirror.openshift.com/pub/openshift-v4/arm64/clients/ocp/stable-${OC_VERSION}/openshift-client-linux.tar.gz; \
     else \
         curl -L https://mirror.openshift.com/pub/openshift-v4/x86_64/clients/ocp/stable-${OC_VERSION}/openshift-client-linux.tar.gz; \
@@ -102,7 +104,7 @@ RUN uv venv /venv && \
     echo "source /venv/bin/activate" >> /home/user/.bashrc 
 
 # install the Fast Flash Tool https://github.com/jumpstarter-dev/fls
-RUN if [ "$TARGETARCH" = "arm64" ]; then \
+RUN if [ "$ARCH" = "arm64" ]; then \
         curl -L https://github.com/jumpstarter-dev/fls/releases/download/0.2.0/fls-aarch64-linux-musl -o /usr/local/bin/fls; \
     else \
         curl -L https://github.com/jumpstarter-dev/fls/releases/download/0.2.0/fls-x86_64-linux -o /usr/local/bin/fls; \

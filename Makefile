@@ -16,6 +16,9 @@ TAG ?= latest
 # Build tool
 CONTAINER_TOOL ?= podman
 
+# Runtime container name (override with `make run CONTAINER_NAME=my-container`)
+CONTAINER_NAME ?= rhas-runtime
+
 # Build arguments
 BUILD_ARGS ?= --build-arg TARGETARCH=$(shell uname -m | sed 's/x86_64/amd64/')
 

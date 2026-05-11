@@ -4,10 +4,11 @@ FROM registry.access.redhat.com/ubi9/s2i-core:9.7
 USER root
 
 ENV CENTOS_RELEASE=9.0-36 \
-    APP_ROOT=/home/tooling
+    APP_ROOT=/home/tooling \
+    ARCH=${TARGETARCH:-arm64}
 
 # install centos stream & fedora repos
-RUN if [ "$TARGETARCH" = "arm64" ]; then \
+RUN if [ "$ARCH" = "arm64" ]; then \
         dnf install -y --setopt=tsflags=nodocs \
         https://mirror.stream.centos.org/9-stream/BaseOS/aarch64/os/Packages/centos-stream-repos-${CENTOS_RELEASE}.el9.noarch.rpm \
         https://mirror.stream.centos.org/9-stream/BaseOS/aarch64/os/Packages/centos-gpg-keys-${CENTOS_RELEASE}.el9.noarch.rpm; \
@@ -53,6 +54,21 @@ RUN mkdir -p $RUSTUP_HOME $CARGO_HOME && \
     curl --proto '=https' --tlsv1.2 -sSfo rustup https://sh.rustup.rs && \
     chmod +x rustup && mv rustup /usr/bin/ && \
     rustup -y --no-modify-path --profile minimal -c rust-src -c rust-analysis -c rls
+
+# install protobuf compiler
+RUN mkdir -p /home/tooling/protobuf && \
+    if [ "$ARCH" = "arm64" ]; then \
+        URL=$(curl -s https://api.github.com/repos/protocolbuffers/protobuf/releases/latest \
+        | jq -r '.assets[] | select(.name | endswith("linux-aarch_64.zip")) | .browser_download_url') && \
+        curl -LO "$URL"; \
+    else \
+        URL=$(curl -s https://api.github.com/repos/protocolbuffers/protobuf/releases/latest \
+        | jq -r '.assets[] | select(.name | endswith("linux-x86_64.zip")) | .browser_download_url') && \
+        curl -LO "$URL"; \
+    fi && \
+    unzip "$(basename "$URL")" -d "/home/tooling/protobuf"
+ENV PATH="/home/tooling/protobuf/bin:$PATH" \
+    PROTOBUF_HOME="/home/tooling/protobuf"
 
 # install uv
 COPY --from=ghcr.io/astral-sh/uv:latest /uv  /bin/uv
