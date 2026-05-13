@@ -3,9 +3,22 @@ FROM registry.access.redhat.com/ubi9/s2i-core:9.7
 
 USER root
 
+# install centos stream & fedora repos, other vars
 ENV CENTOS_RELEASE=9.0-36 \
     APP_ROOT=/home/tooling \
     ARCH=${TARGETARCH:-arm64}
+
+# protobuf compiler path
+ENV PATH="/home/tooling/protobuf/bin:$PATH" \
+    PROTOBUF_HOME="/home/tooling/protobuf"
+
+# install rust
+ENV CARGO_HOME=${APP_ROOT}/.cargo \
+    RUSTUP_HOME=${APP_ROOT}/.rustup \
+    PATH=${APP_ROOT}/.cargo/bin:${PATH}
+
+    # set the virtual environment for jumpstarter etc
+ENV UV_PYTHON=python3.12 VIRTUAL_ENV=/venv
 
 # install centos stream & fedora repos
 RUN if [ "$ARCH" = "arm64" ]; then \
@@ -44,11 +57,6 @@ RUN dnf install -y epel-release && \
 RUN dnf install -y epel-release && \
     dnf install -y --setopt=tsflags=nodocs \
         npm 
-
-# install rust
-ENV CARGO_HOME=${APP_ROOT}/.cargo \
-    RUSTUP_HOME=${APP_ROOT}/.rustup \
-    PATH=${APP_ROOT}/.cargo/bin:${PATH}
     
 RUN mkdir -p $RUSTUP_HOME $CARGO_HOME && \
     curl --proto '=https' --tlsv1.2 -sSfo rustup https://sh.rustup.rs && \
@@ -67,15 +75,10 @@ RUN mkdir -p /home/tooling/protobuf && \
         curl -LO "$URL"; \
     fi && \
     unzip "$(basename "$URL")" -d "/home/tooling/protobuf"
-ENV PATH="/home/tooling/protobuf/bin:$PATH" \
-    PROTOBUF_HOME="/home/tooling/protobuf"
 
 # install uv
 COPY --from=ghcr.io/astral-sh/uv:latest /uv  /bin/uv
 COPY --from=ghcr.io/astral-sh/uv:latest /uvx /bin/uvx
-
-# set the virtual environment for jumpstarter etc
-ENV UV_PYTHON=python3.12 VIRTUAL_ENV=/venv
 
 # clean up
 RUN dnf -y clean all --enablerepo='*' && \

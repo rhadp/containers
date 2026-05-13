@@ -7,6 +7,15 @@ USER root
 ENV CENTOS_RELEASE=9.0-36 \
     ARCH=${TARGETARCH:-arm64}
 
+ENV HOME=/home/user \
+    OC_VERSION=4.21 \
+    K8S_VERSION=1.34 \
+    KUBECONFIG=/home/user/.kube/config \
+    UV_PYTHON=python3.12 \
+    VIRTUAL_ENV=/venv \
+    JUMPSTARTER_VERSION=main \
+    JUMPSTARTER_REPO=https://github.com/jumpstarter-dev/jumpstarter
+
 RUN if [ "$ARCH" = "arm64" ]; then \
         dnf install -y --setopt=tsflags=nodocs \
         https://mirror.stream.centos.org/9-stream/BaseOS/aarch64/os/Packages/centos-stream-repos-${CENTOS_RELEASE}.el9.noarch.rpm \
@@ -33,15 +42,6 @@ RUN dnf install -y --setopt=tsflags=nodocs \
     swtpm swtpm-tools tpm2-tools && \
     dnf -y clean all --enablerepo='*' && \
     rm -rf /var/cache/dnf
-
-ENV HOME=/home/user \
-    OC_VERSION=4.21 \
-    K8S_VERSION=1.34 \
-    KUBECONFIG=/home/user/.kube/config \
-    UV_PYTHON=python3.12 \
-    VIRTUAL_ENV=/venv \
-    JUMPSTARTER_VERSION=main \
-    JUMPSTARTER_REPO=https://github.com/jumpstarter-dev/jumpstarter
 
 # create directories, add user, and set permissions
 RUN mkdir -p /home/user /home/user/.kube /etc/jumpstarter/exporters /home/user/.config/jumpstarter/clients /opt && \

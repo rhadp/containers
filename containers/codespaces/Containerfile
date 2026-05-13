@@ -8,9 +8,14 @@ ENV CENTOS_RELEASE=9.0-36 \
     APP_ROOT=/home/tooling \
     ARCH=${TARGETARCH:-arm64}
 
-    # protobuf compiler path
+# protobuf compiler path
 ENV PATH="/home/tooling/protobuf/bin:$PATH" \
     PROTOBUF_HOME="/home/tooling/protobuf"
+
+# install rust
+ENV CARGO_HOME=${APP_ROOT}/.cargo \
+    RUSTUP_HOME=${APP_ROOT}/.rustup \
+    PATH=${APP_ROOT}/.cargo/bin:${PATH}
 
     # set the virtual environment for jumpstarter etc
 ENV UV_PYTHON=python3.12 VIRTUAL_ENV=/venv
@@ -56,11 +61,6 @@ RUN dnf install -y epel-release && \
 RUN dnf install -y epel-release && \
     dnf install -y --setopt=tsflags=nodocs \
         npm 
-
-# install rust
-ENV CARGO_HOME=${APP_ROOT}/.cargo \
-    RUSTUP_HOME=${APP_ROOT}/.rustup \
-    PATH=${APP_ROOT}/.cargo/bin:${PATH}
     
 RUN mkdir -p $RUSTUP_HOME $CARGO_HOME && \
     curl --proto '=https' --tlsv1.2 -sSfo rustup https://sh.rustup.rs && \
