@@ -1,71 +1,25 @@
-FROM registry.redhat.io/devspaces/udi-rhel9:3.28.0
-# https://catalog.redhat.com/en/software/containers/devspaces/udi-rhel9/673f8460bbf0c33aca0fe316#containerfile
+#FROM registry.redhat.io/devspaces/udi-base-rhel10:3.28.2
+FROM quay.io/devfile/universal-developer-image:ubi10-latest
 
 USER root
 
+ARG TARGETARCH
+
 # install centos stream & fedora repos, other vars
-ENV CENTOS_RELEASE=9.0-36 \
-    APP_ROOT=/home/tooling \
-    ARCH=${TARGETARCH:-arm64}
+ENV ARCH=${TARGETARCH:-arm64} \
+    XDG_CONFIG_HOME=/home/tooling/.config 
 
-# protobuf compiler path
-ENV PATH="/home/tooling/protobuf/bin:$PATH" \
-    PROTOBUF_HOME="/home/tooling/protobuf"
-
-# install rust
-ENV CARGO_HOME=${APP_ROOT}/.cargo \
-    RUSTUP_HOME=${APP_ROOT}/.rustup \
-    PATH=${APP_ROOT}/.cargo/bin:${PATH}
-
-    # set the virtual environment for jumpstarter etc
-ENV UV_PYTHON=python3.12 VIRTUAL_ENV=/venv
+# set the virtual environment for jumpstarter etc
+ENV UV_PYTHON=python3.14 VIRTUAL_ENV=/venv
 
 # install this repository's version of jumpstarter
 ENV JUMPSTARTER_VERSION=main \
     JUMPSTARTER_REPO=https://github.com/jumpstarter-dev/jumpstarter
 
-# install centos stream & fedora repos
-RUN if [ "$ARCH" = "arm64" ]; then \
-        dnf install -y --setopt=tsflags=nodocs \
-        https://mirror.stream.centos.org/9-stream/BaseOS/aarch64/os/Packages/centos-stream-repos-${CENTOS_RELEASE}.el9.noarch.rpm \
-        https://mirror.stream.centos.org/9-stream/BaseOS/aarch64/os/Packages/centos-gpg-keys-${CENTOS_RELEASE}.el9.noarch.rpm; \
-    else \
-        dnf install -y --setopt=tsflags=nodocs \
-        https://mirror.stream.centos.org/9-stream/BaseOS/x86_64/os/Packages/centos-stream-repos-${CENTOS_RELEASE}.el9.noarch.rpm \
-        https://mirror.stream.centos.org/9-stream/BaseOS/x86_64/os/Packages/centos-gpg-keys-${CENTOS_RELEASE}.el9.noarch.rpm; \
-    fi && \
-    dnf install -y --setopt=tsflags=nodocs \
-    https://dl.fedoraproject.org/pub/epel/epel-release-latest-9.noarch.rpm
-
 # install basic packages and common development dependencies
 RUN dnf install -y --setopt=tsflags=nodocs \
-    python3.12 python3.12-devel python3-pip \
-    git jq yq \
-    nss_wrapper kmod openssh-clients nc stow \
-    fuse-overlayfs slirp4netns shadow-utils \
-    patch lsof redhat-rpm-config procps-ng \
-    unzip wget bzip2 zip which
-
-# install development dependencies
-RUN dnf install -y epel-release && \
-    dnf install -y --setopt=tsflags=nodocs \
-        gdb gd-devel cmake automake autoconf make \
-        gcc gcc-c++ \
-        glibc-devel \
-        openssl-devel \
-        sqlite-devel \
-        zlib-devel libcurl-devel libpq-devel \
-        libxml2-devel libxslt-devel 
-
-# install node
-RUN dnf install -y epel-release && \
-    dnf install -y --setopt=tsflags=nodocs \
-        npm 
-    
-RUN mkdir -p $RUSTUP_HOME $CARGO_HOME && \
-    curl --proto '=https' --tlsv1.2 -sSfo rustup https://sh.rustup.rs && \
-    chmod +x rustup && mv rustup /usr/bin/ && \
-    rustup -y --no-modify-path --profile minimal -c rust-src -c rust-analysis -c rls
+    python3.14 python3.14-devel python3-pip \
+    fuse-overlayfs rpm-build
 
 # install protobuf compiler
 RUN mkdir -p /home/tooling/protobuf && \
@@ -92,9 +46,6 @@ RUN uv venv /venv && \
     uv pip install -r /tmp/requirements.txt && \
     rm -rf /tmp/requirements.txt
 
-# install caib
-RUN curl -sSL https://raw.githubusercontent.com/centos-automotive-suite/automotive-dev-operator/v0.1.0/hack/install-caib.sh | bash -s -- v0.1.0
-
 # jmp-login script
 COPY scripts/jmp-login /usr/local/bin/jmp-login
 RUN chmod +x /usr/local/bin/jmp-login
@@ -103,9 +54,26 @@ RUN chmod +x /usr/local/bin/jmp-login
 COPY scripts/init-workspace /usr/local/bin/init-workspace
 RUN chmod +x /usr/local/bin/init-workspace
 
+# Install Claude Code, using direct binary download instead of the install.sh script to avoid OOM-killing
+# the binary's post-install setup step in memory-constrained container builds.
+RUN set -e; \
+    mkdir -p /home/tooling/bin /home/tooling/.claude && \
+    arch=$(uname -m | sed 's/x86_64/x64/;s/aarch64/arm64/'); \
+    if ldd /bin/ls 2>&1 | grep -q musl || [ -f /lib/libc.musl-x86_64.so.1 ] || [ -f /lib/libc.musl-aarch64.so.1 ]; then \
+        platform="linux-${arch}-musl"; \
+    else \
+        platform="linux-${arch}"; \
+    fi; \
+    version=$(curl -fsSL https://downloads.claude.ai/claude-code-releases/latest); \
+    curl -fsSL -o /home/tooling/bin/claude "https://downloads.claude.ai/claude-code-releases/${version}/${platform}/claude"; \
+    chmod +x /home/tooling/bin/claude
+
 # clean up
 RUN dnf -y clean all --enablerepo='*' && \
     rm -rf /var/cache/dnf
+
+# Create symbolic links from /home/tooling/ -> /home/user/
+#RUN stow . -t /home/user/ -d /home/tooling/ --no-folding
 
 # A last pass to make sure that an arbitrary user can write in $HOME
 RUN chgrp -R 0 /home && chmod -R g=u /home
