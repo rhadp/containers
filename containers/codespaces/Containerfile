@@ -17,30 +17,42 @@ ENV UV_PYTHON=python3.14 VIRTUAL_ENV=/venv
 ENV JUMPSTARTER_VERSION=main \
     JUMPSTARTER_REPO=https://github.com/jumpstarter-dev/jumpstarter
 
-# install basic packages and common development dependencies
+# install epel releases
+RUN dnf install -y --setopt=tsflags=nodocs https://dl.fedoraproject.org/pub/epel/epel-release-latest-10.noarch.rpm && \
+    dnf install -y epel-release 
+
+# install basic packages
 RUN dnf install -y --setopt=tsflags=nodocs \
-    python3.14 python3.14-devel python3-pip \
-    git jq yq \
-    nss_wrapper kmod openssh-clients nc stow \
+    nss_wrapper kmod openssh-clients nc \
     fuse-overlayfs slirp4netns shadow-utils \
     patch lsof redhat-rpm-config procps-ng \
     unzip wget bzip2 zip which rpm-build
 
 # install development dependencies
-RUN dnf install -y epel-release && \
-    dnf install -y --setopt=tsflags=nodocs \
-        gdb gd-devel cmake automake autoconf make \
-        gcc gcc-c++ \
-        glibc-devel \
-        openssl-devel \
-        sqlite-devel \
-        zlib-devel libcurl-devel libpq-devel \
-        libxml2-devel libxslt-devel 
+RUN dnf install -y --setopt=tsflags=nodocs \
+    python3.14 python3.14-devel python3-pip \
+    git jq  yq \
+    gdb gd-devel cmake automake autoconf make \
+    gcc gcc-c++ \
+    glibc-devel \
+    openssl-devel \
+    sqlite-devel \
+    zlib-devel libcurl-devel libpq-devel \
+    libxml2-devel libxslt-devel 
 
 # install node
-RUN dnf install -y epel-release && \
-    dnf install -y --setopt=tsflags=nodocs \
-        npm 
+ARG NODE_VERSION=26.5.0
+RUN set -e; \
+    if [ "$ARCH" = "arm64" ]; then \
+        node_arch=arm64; \
+    else \
+        node_arch=x64; \
+    fi; \
+    curl -fsSL "https://nodejs.org/dist/v${NODE_VERSION}/node-v${NODE_VERSION}-linux-${node_arch}.tar.xz" \
+        -o /tmp/node.tar.xz && \
+    tar -xJf /tmp/node.tar.xz -C /usr/local --strip-components=1 && \
+    rm /tmp/node.tar.xz && \
+    node --version && npm --version
 
 # install rust
 ENV CARGO_HOME=${APP_ROOT}/.cargo \
