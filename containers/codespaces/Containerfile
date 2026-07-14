@@ -20,8 +20,38 @@ ENV JUMPSTARTER_VERSION=main \
 # install basic packages and common development dependencies
 RUN dnf install -y --setopt=tsflags=nodocs \
     python3.14 python3.14-devel python3-pip \
-    fuse-overlayfs rpm-build
+    git jq yq \
+    nss_wrapper kmod openssh-clients nc stow \
+    fuse-overlayfs slirp4netns shadow-utils \
+    patch lsof redhat-rpm-config procps-ng \
+    unzip wget bzip2 zip which rpm-build
 
+# install development dependencies
+RUN dnf install -y epel-release && \
+    dnf install -y --setopt=tsflags=nodocs \
+        gdb gd-devel cmake automake autoconf make \
+        gcc gcc-c++ \
+        glibc-devel \
+        openssl-devel \
+        sqlite-devel \
+        zlib-devel libcurl-devel libpq-devel \
+        libxml2-devel libxslt-devel 
+
+# install node
+RUN dnf install -y epel-release && \
+    dnf install -y --setopt=tsflags=nodocs \
+        npm 
+
+# install rust
+ENV CARGO_HOME=${APP_ROOT}/.cargo \
+    RUSTUP_HOME=${APP_ROOT}/.rustup \
+    PATH=${APP_ROOT}/.cargo/bin:${PATH}
+    
+RUN mkdir -p $RUSTUP_HOME $CARGO_HOME && \
+    curl --proto '=https' --tlsv1.2 -sSfo rustup https://sh.rustup.rs && \
+    chmod +x rustup && mv rustup /usr/bin/ && \
+    rustup -y --no-modify-path --profile minimal -c rust-src -c rust-analysis -c rls
+    
 # install protobuf compiler
 RUN mkdir -p /home/tooling/protobuf && \
     if [ "$ARCH" = "arm64" ]; then \
