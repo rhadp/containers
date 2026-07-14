@@ -42,6 +42,7 @@ RUN dnf install -y --setopt=tsflags=nodocs \
 
 # install node
 ARG NODE_VERSION=26.5.0
+RUN echo "NODE_VERSION: $NODE_VERSION  $TARGETARCH"
 RUN set -e; \
     if [ "$ARCH" = "arm64" ]; then \
         node_arch=arm64; \
