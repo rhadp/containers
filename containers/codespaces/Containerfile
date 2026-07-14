@@ -1,5 +1,5 @@
-#FROM registry.redhat.io/devspaces/udi-base-rhel10:3.28.2
-FROM quay.io/devfile/universal-developer-image:ubi10-latest
+FROM registry.redhat.io/devspaces/udi-base-rhel10:3.29
+#FROM quay.io/devfile/universal-developer-image:ubi10-latest
 
 USER root
 
@@ -7,6 +7,7 @@ ARG TARGETARCH
 
 # install centos stream & fedora repos, other vars
 ENV ARCH=${TARGETARCH:-arm64} \
+    HOME=/home/tooling \
     XDG_CONFIG_HOME=/home/tooling/.config 
 
 # set the virtual environment for jumpstarter etc
@@ -72,11 +73,9 @@ RUN set -e; \
 RUN dnf -y clean all --enablerepo='*' && \
     rm -rf /var/cache/dnf
 
-# Create symbolic links from /home/tooling/ -> /home/user/
-#RUN stow . -t /home/user/ -d /home/tooling/ --no-folding
-
 # A last pass to make sure that an arbitrary user can write in $HOME
 RUN chgrp -R 0 /home && chmod -R g=u /home
 
-# back to the user
 USER 10001
+ENV HOME=/home/user
+WORKDIR /projects
