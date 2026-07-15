@@ -22,22 +22,12 @@ ENV JUMPSTARTER_VERSION=main \
 RUN dnf install -y --setopt=tsflags=nodocs https://dl.fedoraproject.org/pub/epel/epel-release-latest-10.noarch.rpm && \
     dnf install -y epel-release 
 
-# install CentOS Stream 10 AppStream
-RUN arch=$(uname -m) && \
-    printf '%s\n' \
-    '[cs10-appstream]' \
-    'name=CentOS Stream 10 AppStream' \
-    "baseurl=https://mirror.stream.centos.org/10-stream/AppStream/${arch}/os/" \
-    'enabled=1' \
-    'gpgcheck=0' \
-    > /etc/yum.repos.d/cs10-appstream.repo
-
 # install basic packages
 RUN dnf install -y --setopt=tsflags=nodocs \
     nss_wrapper kmod openssh-clients nc \
     fuse-overlayfs slirp4netns shadow-utils \
     patch lsof redhat-rpm-config procps-ng \
-    unzip wget bzip2 zip which rpm-build createrepo_c
+    unzip wget bzip2 zip which rpm-build 
 
 # install development dependencies
 RUN dnf install -y --setopt=tsflags=nodocs \
@@ -49,6 +39,18 @@ RUN dnf install -y --setopt=tsflags=nodocs \
     sqlite-devel zlib-devel libcurl-devel libpq-devel \
     libxml2-devel libxslt-devel 
 
+# createrepo_c is in CentOS Stream 10 AppStream, not UBI/EPEL (the old createrepo package is gone)
+RUN arch=$(uname -m) && \
+    printf '%s\n' \
+    '[cs10-appstream]' \
+    'name=CentOS Stream 10 AppStream' \
+    "baseurl=https://mirror.stream.centos.org/10-stream/AppStream/${arch}/os/" \
+    'enabled=1' \
+    'gpgcheck=0' \
+    > /etc/yum.repos.d/cs10-appstream.repo && \
+    dnf install -y --setopt=tsflags=nodocs createrepo_c && \
+    rm -f /etc/yum.repos.d/cs10-appstream.repo
+    
 # install node (x64 binaries require libatomic)
 ARG NODE_VERSION=26.5.0
 RUN dnf install -y --setopt=tsflags=nodocs libatomic && \
