@@ -22,23 +22,31 @@ ENV JUMPSTARTER_VERSION=main \
 RUN dnf install -y --setopt=tsflags=nodocs https://dl.fedoraproject.org/pub/epel/epel-release-latest-10.noarch.rpm && \
     dnf install -y epel-release 
 
+# install CentOS Stream 10 AppStream
+RUN arch=$(uname -m) && \
+    printf '%s\n' \
+    '[cs10-appstream]' \
+    'name=CentOS Stream 10 AppStream' \
+    "baseurl=https://mirror.stream.centos.org/10-stream/AppStream/${arch}/os/" \
+    'enabled=1' \
+    'gpgcheck=0' \
+    > /etc/yum.repos.d/cs10-appstream.repo
+
 # install basic packages
 RUN dnf install -y --setopt=tsflags=nodocs \
     nss_wrapper kmod openssh-clients nc \
     fuse-overlayfs slirp4netns shadow-utils \
     patch lsof redhat-rpm-config procps-ng \
-    unzip wget bzip2 zip which rpm-build
+    unzip wget bzip2 zip which rpm-build createrepo_c
 
 # install development dependencies
 RUN dnf install -y --setopt=tsflags=nodocs \
     python3.14 python3.14-devel python3-pip \
     git jq  yq \
-    gdb gd-devel cmake automake autoconf make \
+    cmake automake autoconf make \
     gcc gcc-c++ golang \
-    glibc-devel \
-    openssl-devel \
-    sqlite-devel \
-    zlib-devel libcurl-devel libpq-devel \
+    gdb gd-devel glibc-devel openssl-devel \
+    sqlite-devel zlib-devel libcurl-devel libpq-devel \
     libxml2-devel libxslt-devel 
 
 # install node (x64 binaries require libatomic)
