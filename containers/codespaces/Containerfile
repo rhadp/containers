@@ -49,7 +49,36 @@ RUN arch=$(uname -m) && \
     > /etc/yum.repos.d/cs10-appstream.repo && \
     dnf install -y --setopt=tsflags=nodocs createrepo_c && \
     rm -f /etc/yum.repos.d/cs10-appstream.repo
-    
+
+ENV OC_VERSION=4.21 \
+    K8S_VERSION=1.34 \
+    KUBECONFIG=/home/user/.kube/config
+
+# oc client
+RUN if [ "$ARCH" = "arm64" ]; then \
+        curl -L https://mirror.openshift.com/pub/openshift-v4/arm64/clients/ocp/stable-${OC_VERSION}/openshift-client-linux.tar.gz; \
+    else \
+        curl -L https://mirror.openshift.com/pub/openshift-v4/x86_64/clients/ocp/stable-${OC_VERSION}/openshift-client-linux.tar.gz; \
+    fi | tar -C /usr/local/bin -xz --no-same-owner && \
+    chmod +x /usr/local/bin/oc
+  
+## kubectl
+RUN <<EOF
+set -euf -o pipefail
+
+cat <<EOF2 > /etc/yum.repos.d/kubernetes.repo
+[kubernetes]
+name=Kubernetes
+baseurl=https://pkgs.k8s.io/core:/stable:/v${K8S_VERSION}/rpm/
+enabled=1
+gpgcheck=1
+gpgkey=https://pkgs.k8s.io/core:/stable:/v${K8S_VERSION}/rpm/repodata/repomd.xml.key
+EOF2
+
+dnf install --setopt=tsflags=nodocs -y kubectl
+curl -sSL -o ~/.kubectl_aliases https://raw.githubusercontent.com/ahmetb/kubectl-alias/master/.kubectl_aliases
+EOF
+
 # install node (x64 binaries require libatomic)
 ARG NODE_VERSION=26.5.0
 RUN dnf install -y --setopt=tsflags=nodocs libatomic && \
