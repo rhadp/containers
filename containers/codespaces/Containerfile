@@ -105,8 +105,8 @@ COPY --from=ghcr.io/astral-sh/uv:latest /uvx /bin/uvx
 #RUN chmod +x /usr/local/bin/jmp-login
 
 # init-workspace script
-#COPY scripts/init-workspace /usr/local/bin/init-workspace
-#RUN chmod +x /usr/local/bin/init-workspace
+COPY scripts/init-workspace /usr/local/bin/init-workspace
+RUN chmod +x /usr/local/bin/init-workspace
 
 # Install Claude Code, using direct binary download instead of the install.sh script to avoid OOM-killing
 # the binary's post-install setup step in memory-constrained container builds.
