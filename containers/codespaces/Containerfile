@@ -4,7 +4,6 @@ USER root
 
 ARG TARGETARCH
 
-# install centos stream & fedora repos, other vars
 ENV ARCH=${TARGETARCH:-arm64} \
     HOME=/home/tooling \
     APP_ROOT=/home/tooling \
@@ -22,7 +21,8 @@ RUN dnf install -y --setopt=tsflags=nodocs \
     nss_wrapper kmod openssh-clients nc \
     fuse-overlayfs slirp4netns shadow-utils \
     patch lsof redhat-rpm-config procps-ng \
-    unzip wget bzip2 zip which rpm-build 
+    unzip wget bzip2 zip which rpm-build \
+    openssl openssl-devel
 
 # install development dependencies
 RUN dnf install -y --setopt=tsflags=nodocs \
