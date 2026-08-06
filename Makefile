@@ -30,8 +30,10 @@ build-all: update runtime builder pipeline codespaces
 
 update:
 	@echo "🔨 Updating base images..."
+	$(CONTAINER_TOOL) pull registry.redhat.io/ubi10:10.2
 	$(CONTAINER_TOOL) pull registry.redhat.io/ubi10/go-toolset:latest
 	$(CONTAINER_TOOL) pull registry.redhat.io/devspaces/udi-base-rhel10:3.29
+	$(CONTAINER_TOOL) pull registry.redhat.io/rhel10/s2i-core:10.2
 	$(CONTAINER_TOOL) pull ghcr.io/astral-sh/uv
 	@echo "✅ Base images updated"
 
@@ -83,9 +85,10 @@ clean:
 # Clean up all related images including base images
 clean-all: clean
 	@echo "🧹 Cleaning up all related images..."
-	-$(CONTAINER_TOOL) rmi registry.access.redhat.com/ubi9/ubi:9.7  2>/dev/null || true
-	-$(CONTAINER_TOOL) rmi registry.access.redhat.com/ubi9/s2i-core:9.7 2>/dev/null || true
-	-$(CONTAINER_TOOL) rmi registry.redhat.io/devspaces/udi-rhel9:3.25.0 2>/dev/null || true
+	-$(CONTAINER_TOOL) rmi registry.redhat.io/ubi10:10.2  2>/dev/null || true
+	-$(CONTAINER_TOOL) rmi registry.redhat.io/ubi10/go-toolset:latest 2>/dev/null || true
+	-$(CONTAINER_TOOL) rmi registry.redhat.io/devspaces/udi-base-rhel10:3.29 2>/dev/null || true
+	-$(CONTAINER_TOOL) rmi registry.redhat.io/rhel10/s2i-core:10.2 2>/dev/null || true
 	-$(CONTAINER_TOOL) rmi ghcr.io/astral-sh/uv 2>/dev/null || true
 	-$(CONTAINER_TOOL) system prune -f 2>/dev/null || true
 	@echo "✅ All images cleaned"

@@ -43,7 +43,7 @@ RUN dnf install -y --setopt=tsflags=nodocs https://dl.fedoraproject.org/pub/epel
 # install basic packages
 RUN dnf install -y --setopt=tsflags=nodocs \
     nss_wrapper kmod openssh-clients nc \
-    fuse-overlayfs slirp4netns shadow-utils \
+    fuse-overlayfs passt shadow-utils \
     patch lsof redhat-rpm-config procps-ng \
     unzip wget bzip2 zip which rpm-build \
     openssl openssl-devel
@@ -94,7 +94,6 @@ gpgkey=https://pkgs.k8s.io/core:/stable:/v${K8S_VERSION}/rpm/repodata/repomd.xml
 EOF2
 
 dnf install --setopt=tsflags=nodocs -y kubectl
-curl -sSL -o ~/.kubectl_aliases https://raw.githubusercontent.com/ahmetb/kubectl-alias/master/.kubectl_aliases
 EOF
 
 # Install the tkn CLI

@@ -1,68 +1,135 @@
-FROM registry.access.redhat.com/ubi9/s2i-core:9.7
-# https://catalog.redhat.com/en/software/containers/ubi9/s2i-core/61fb9fa7891fad8774b86e06?architecture=arm64&image=#containerfile
+# caib builder container
+FROM registry.redhat.io/ubi10/go-toolset:latest as builder
+
+ARG TARGETARCH
+ENV CGO_ENABLED=0 GOARCH=${TARGETARCH}
+
+ENV BUILDER_REPO=https://github.com/mickume/automotive-dev-operator \
+    BUILDER_VERSION=develop
+
+# build the caib tool
+RUN git clone -b ${BUILDER_VERSION} ${BUILDER_REPO} && \
+    cd automotive-dev-operator && \
+    make build-caib && \
+    chmod +x bin/caib && \
+    cp bin/caib /opt/app-root/src/caib
+
+#https://catalog.redhat.com/en/software/containers/rhel10/s2i-core/677cf8035fdd0fab2f79e70a#overview
+FROM registry.redhat.io/rhel10/s2i-core:10.2
 
 USER root
 
-# install centos stream & fedora repos, other vars
-ENV CENTOS_RELEASE=9.0-36 \
-    APP_ROOT=/home/tooling \
-    ARCH=${TARGETARCH:-arm64}
+ARG TARGETARCH
 
-# protobuf compiler path
-ENV PATH="/home/tooling/protobuf/bin:$PATH" \
-    PROTOBUF_HOME="/home/tooling/protobuf"
+ENV ARCH=${TARGETARCH:-arm64} \
+    HOME=/opt/app-root/src \
+    APP_ROOT=/opt/app-root \
+    XDG_CONFIG_HOME=/opt/app-root/.config 
+
+# set the virtual environment
+ENV UV_PYTHON=python3.14 VIRTUAL_ENV=/venv
+
+# install this version of jumpstarter, tkn etc
+ENV JUMPSTARTER_REPO=https://github.com/mickume/jumpstarter \
+    JUMPSTARTER_VERSION=main \
+    TKN_VERSION=1.23.0 \
+    OC_VERSION=4.21 \
+    K8S_VERSION=1.34
+    
+# install epel releases
+RUN dnf install -y --setopt=tsflags=nodocs https://dl.fedoraproject.org/pub/epel/epel-release-latest-10.noarch.rpm && \
+    dnf install -y epel-release 
+
+# install basic packages
+RUN dnf install -y --setopt=tsflags=nodocs \
+    nss_wrapper kmod openssh-clients nc \
+    fuse-overlayfs passt shadow-utils \
+    patch lsof redhat-rpm-config procps-ng \
+    unzip wget bzip2 zip which rpm-build \
+    openssl openssl-devel
+
+# install development dependencies
+RUN dnf install -y --setopt=tsflags=nodocs \
+    python3.14 python3.14-devel python3-pip \
+    git jq  yq \
+    cmake automake autoconf make \
+    gcc gcc-c++ golang \
+    gdb gd-devel glibc-devel openssl-devel \
+    sqlite-devel zlib-devel libcurl-devel libpq-devel \
+    libxml2-devel libxslt-devel 
+
+# createrepo_c is in CentOS Stream 10 AppStream, not UBI/EPEL (the old createrepo package is gone)
+RUN arch=$(uname -m) && \
+    printf '%s\n' \
+    '[cs10-appstream]' \
+    'name=CentOS Stream 10 AppStream' \
+    "baseurl=https://mirror.stream.centos.org/10-stream/AppStream/${arch}/os/" \
+    'enabled=1' \
+    'gpgcheck=0' \
+    > /etc/yum.repos.d/cs10-appstream.repo && \
+    dnf install -y --setopt=tsflags=nodocs createrepo_c && \
+    rm -f /etc/yum.repos.d/cs10-appstream.repo
+
+ENV KUBECONFIG=${APP_ROOT}/.kube/config
+
+# oc client
+RUN if [ "$ARCH" = "arm64" ]; then \
+        curl -L https://mirror.openshift.com/pub/openshift-v4/arm64/clients/ocp/stable-${OC_VERSION}/openshift-client-linux.tar.gz; \
+    else \
+        curl -L https://mirror.openshift.com/pub/openshift-v4/x86_64/clients/ocp/stable-${OC_VERSION}/openshift-client-linux.tar.gz; \
+    fi | tar -C /usr/local/bin -xz --no-same-owner && \
+    chmod +x /usr/local/bin/oc
+  
+## kubectl
+RUN <<EOF
+set -euf -o pipefail
+
+cat <<EOF2 > /etc/yum.repos.d/kubernetes.repo
+[kubernetes]
+name=Kubernetes
+baseurl=https://pkgs.k8s.io/core:/stable:/v${K8S_VERSION}/rpm/
+enabled=1
+gpgcheck=1
+gpgkey=https://pkgs.k8s.io/core:/stable:/v${K8S_VERSION}/rpm/repodata/repomd.xml.key
+EOF2
+
+dnf install --setopt=tsflags=nodocs -y kubectl
+EOF
+
+# Install the tkn CLI
+RUN mkdir -p /home/tooling/bin && \
+    if [ "${ARCH}" = "arm64" ]; then \
+        curl -fsSL "https://mirror.openshift.com/pub/cgw/pipelines/${TKN_VERSION}/tkn-linux-arm64.tar.gz" | tar xz -C /usr/local/bin; \
+    else \
+        curl -fsSL "https://mirror.openshift.com/pub/cgw/pipelines/${TKN_VERSION}/tkn-linux-amd64.tar.gz" | tar xz -C /usr/local/bin; \
+    fi && \
+    chmod +x /usr/local/bin/tkn
+
+# install node (x64 binaries require libatomic)
+ARG NODE_VERSION=26.5.0
+RUN dnf install -y --setopt=tsflags=nodocs libatomic && \
+    set -e; \
+    if [ "$ARCH" = "arm64" ]; then \
+        node_arch=arm64; \
+    else \
+        node_arch=x64; \
+    fi; \
+    curl -fsSL "https://nodejs.org/dist/v${NODE_VERSION}/node-v${NODE_VERSION}-linux-${node_arch}.tar.xz" \
+        -o /tmp/node.tar.xz && \
+    tar -xJf /tmp/node.tar.xz -C /usr/local --strip-components=1 && \
+    rm /tmp/node.tar.xz && \
+    node --version && npm --version
 
 # install rust
 ENV CARGO_HOME=${APP_ROOT}/.cargo \
     RUSTUP_HOME=${APP_ROOT}/.rustup \
     PATH=${APP_ROOT}/.cargo/bin:${PATH}
-
-    # set the virtual environment for jumpstarter etc
-ENV UV_PYTHON=python3.12 VIRTUAL_ENV=/venv
-
-# install centos stream & fedora repos
-RUN if [ "$ARCH" = "arm64" ]; then \
-        dnf install -y --setopt=tsflags=nodocs \
-        https://mirror.stream.centos.org/9-stream/BaseOS/aarch64/os/Packages/centos-stream-repos-${CENTOS_RELEASE}.el9.noarch.rpm \
-        https://mirror.stream.centos.org/9-stream/BaseOS/aarch64/os/Packages/centos-gpg-keys-${CENTOS_RELEASE}.el9.noarch.rpm; \
-    else \
-        dnf install -y --setopt=tsflags=nodocs \
-        https://mirror.stream.centos.org/9-stream/BaseOS/x86_64/os/Packages/centos-stream-repos-${CENTOS_RELEASE}.el9.noarch.rpm \
-        https://mirror.stream.centos.org/9-stream/BaseOS/x86_64/os/Packages/centos-gpg-keys-${CENTOS_RELEASE}.el9.noarch.rpm; \
-    fi && \
-    dnf install -y --setopt=tsflags=nodocs \
-    https://dl.fedoraproject.org/pub/epel/epel-release-latest-9.noarch.rpm
-
-# install basic packages and common development dependencies
-RUN dnf install -y --setopt=tsflags=nodocs \
-    python3.12 python3.12-devel python3-pip \
-    git jq yq \
-    nss_wrapper kmod openssh-clients nc stow \
-    fuse-overlayfs slirp4netns shadow-utils \
-    patch lsof redhat-rpm-config procps-ng \
-    unzip wget bzip2 zip which
-
-# install development dependencies
-RUN dnf install -y epel-release && \
-    dnf install -y --setopt=tsflags=nodocs \
-        gdb gd-devel cmake automake autoconf make \
-        gcc gcc-c++ \
-        glibc-devel \
-        openssl-devel \
-        sqlite-devel \
-        zlib-devel libcurl-devel libpq-devel \
-        libxml2-devel libxslt-devel 
-
-# install node
-RUN dnf install -y epel-release && \
-    dnf install -y --setopt=tsflags=nodocs \
-        npm 
     
 RUN mkdir -p $RUSTUP_HOME $CARGO_HOME && \
     curl --proto '=https' --tlsv1.2 -sSfo rustup https://sh.rustup.rs && \
     chmod +x rustup && mv rustup /usr/bin/ && \
     rustup -y --no-modify-path --profile minimal -c rust-src -c rust-analysis -c rls
-
+    
 # install protobuf compiler
 RUN mkdir -p /home/tooling/protobuf && \
     if [ "$ARCH" = "arm64" ]; then \
@@ -80,9 +147,24 @@ RUN mkdir -p /home/tooling/protobuf && \
 COPY --from=ghcr.io/astral-sh/uv:latest /uv  /bin/uv
 COPY --from=ghcr.io/astral-sh/uv:latest /uvx /bin/uvx
 
+# copy the caib tool
+COPY --from=builder /opt/app-root/src/caib /usr/local/bin/caib
+
+# install jumpstarter & other python dependencies
+COPY requirements.txt /tmp/requirements.txt
+
+RUN uv venv --clear /venv && \
+    uv pip install -r /tmp/requirements.txt && \
+    uv pip install "git+${JUMPSTARTER_REPO}@${JUMPSTARTER_VERSION}#subdirectory=python/packages/jumpstarter-all" && \
+    rm -rf /tmp/requirements.txt
+
 # clean up
 RUN dnf -y clean all --enablerepo='*' && \
     rm -rf /var/cache/dnf
 
 # Reset permissions of modified directories
 RUN rpm-file-permissions && chown -R 1001:0 ${APP_ROOT}
+
+# Directory with the sources is set as the working directory so all STI scripts
+# can execute relative to this path.
+WORKDIR ${HOME}

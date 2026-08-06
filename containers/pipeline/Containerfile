@@ -1,7 +1,14 @@
 FROM ghcr.io/rhadp/runtime:latest
 
-ARG TARGETARCH
 USER root
+
+ARG TARGETARCH
+
+ENV ARCH=${TARGETARCH:-arm64} \
+    HOME=/opt/app-root/src \
+    APP_ROOT=/opt/app-root \
+    XDG_CONFIG_HOME=/opt/app-root/.config \
+    PATH=/opt/app-root/src/bin:/opt/app-root/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
 
 # add additional scripts
 #COPY s3-upload.py /home/user/s3-upload.py
@@ -12,6 +19,6 @@ RUN uv pip install -r /tmp/requirements.txt && \
     rm -rf /tmp/requirements.txt
 
 # A last pass to make sure that an arbitrary user can write in $HOME
-RUN chgrp -R 0 /home && chmod -R g=u /home
+RUN chgrp -R 0 ${APP_ROOT} && chmod -R g=u ${APP_ROOT}
 
-USER 10001
+USER 1001

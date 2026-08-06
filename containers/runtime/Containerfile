@@ -1,66 +1,57 @@
-FROM registry.access.redhat.com/ubi9/ubi:9.7 
+# caib builder container
+FROM registry.redhat.io/ubi10/go-toolset:latest as builder
 
 ARG TARGETARCH
+ENV CGO_ENABLED=0 GOARCH=${TARGETARCH}
+
+ENV BUILDER_REPO=https://github.com/mickume/automotive-dev-operator \
+    BUILDER_VERSION=develop
+
+# build the caib tool
+RUN git clone -b ${BUILDER_VERSION} ${BUILDER_REPO} && \
+    cd automotive-dev-operator && \
+    make build-caib && \
+    chmod +x bin/caib && \
+    cp bin/caib /opt/app-root/src/caib
+
+# https://catalog.redhat.com/en/software/containers/ubi10/66f2a8d39bdbdc1b74e81460#overview
+FROM registry.redhat.io/ubi10:10.2
+
 USER root
 
-# install centos stream & fedora repos
-ENV CENTOS_RELEASE=9.0-36 \
-    ARCH=${TARGETARCH:-arm64}
+ARG TARGETARCH
 
-ENV HOME=/home/user \
-    OC_VERSION=4.21 \
-    K8S_VERSION=1.34 \
-    KUBECONFIG=/home/user/.kube/config \
-    UV_PYTHON=python3.12 \
-    VIRTUAL_ENV=/venv \
+ENV ARCH=${TARGETARCH:-arm64} \
+    HOME=/opt/app-root/src \
+    APP_ROOT=/opt/app-root \
+    XDG_CONFIG_HOME=/opt/app-root/.config \
+    PATH=/opt/app-root/src/bin:/opt/app-root/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+
+# set the virtual environment
+ENV UV_PYTHON=python3.14 VIRTUAL_ENV=/venv
+
+# install this version of jumpstarter, tkn etc
+ENV JUMPSTARTER_REPO=https://github.com/mickume/jumpstarter \
     JUMPSTARTER_VERSION=main \
-    JUMPSTARTER_REPO=https://github.com/jumpstarter-dev/jumpstarter
+    TKN_VERSION=1.23.0 \
+    OC_VERSION=4.21 \
+    K8S_VERSION=1.34
+    
+# install epel releases
+RUN dnf install -y --setopt=tsflags=nodocs https://dl.fedoraproject.org/pub/epel/epel-release-latest-10.noarch.rpm && \
+    dnf install -y epel-release 
 
-RUN if [ "$ARCH" = "arm64" ]; then \
-        dnf install -y --setopt=tsflags=nodocs \
-        https://mirror.stream.centos.org/9-stream/BaseOS/aarch64/os/Packages/centos-stream-repos-${CENTOS_RELEASE}.el9.noarch.rpm \
-        https://mirror.stream.centos.org/9-stream/BaseOS/aarch64/os/Packages/centos-gpg-keys-${CENTOS_RELEASE}.el9.noarch.rpm; \
-    else \
-        dnf install -y --setopt=tsflags=nodocs \
-        https://mirror.stream.centos.org/9-stream/BaseOS/x86_64/os/Packages/centos-stream-repos-${CENTOS_RELEASE}.el9.noarch.rpm \
-        https://mirror.stream.centos.org/9-stream/BaseOS/x86_64/os/Packages/centos-gpg-keys-${CENTOS_RELEASE}.el9.noarch.rpm; \
-    fi && \
-    dnf install -y --setopt=tsflags=nodocs \
-    https://dl.fedoraproject.org/pub/epel/epel-release-latest-9.noarch.rpm
-
-# install basic packages & virtualization packages
+# install basic packages
 RUN dnf install -y --setopt=tsflags=nodocs \
-    python3.12 python3.12-devel python3-pip \
-    git jq yq \
-    nss_wrapper kmod openssh-clients nc stow \
-    fuse-overlayfs slirp4netns shadow-utils \
-    python3-libgpiod nss_wrapper \
-    qemu-kvm qemu-img libvirt \
-    "@virtualization-hypervisor" "@virtualization-client" "@virtualization-platform" "@virtualization-tools" \
-    virt-install virt-viewer \
-    genisoimage \
-    swtpm swtpm-tools tpm2-tools && \
-    dnf -y clean all --enablerepo='*' && \
-    rm -rf /var/cache/dnf
+    nss_wrapper kmod openssh-clients nc \
+    fuse-overlayfs passt shadow-utils \
+    patch lsof redhat-rpm-config procps-ng \
+    unzip wget bzip2 zip which rpm-build \
+    openssl openssl-devel \
+    python3.14 python3.14-devel python3-pip \
+    git jq  yq
 
-# create directories, add user, and set permissions
-RUN mkdir -p /home/user /home/user/.kube /etc/jumpstarter/exporters /home/user/.config/jumpstarter/clients /opt && \
-    # add user and configure it
-    useradd -u 1000 -G wheel,root -d /home/user --shell /bin/bash -m user && \
-    # Bash-related files are backed up to /home/tooling/ in case they are deleted when persistUserHome is enabled.
-    #cp /home/user/.bashrc /home/tooling/.bashrc && \
-    #cp /home/user/.bash_profile /home/tooling/.bash_profile && \
-    for f in "${HOME}" "/etc/passwd" "/etc/group"; do \
-        echo "Changing permissions on ${f}" && chgrp -R 0 ${f} && \
-        chmod -R g+rwX ${f}; \
-    done && \
-    # Generate passwd.template
-    cat /etc/passwd | \
-    sed s#user:x.*#user:x:\${USER_ID}:\${GROUP_ID}::\${HOME}:/bin/bash#g \
-    > ${HOME}/passwd.template && \
-    cat /etc/group | \
-    sed s#root:x:0:#root:x:0:0,\${USER_ID}:#g \
-    > ${HOME}/group.template
+ENV KUBECONFIG=${APP_ROOT}/.kube/config
 
 # oc client
 RUN if [ "$ARCH" = "arm64" ]; then \
@@ -84,46 +75,42 @@ gpgkey=https://pkgs.k8s.io/core:/stable:/v${K8S_VERSION}/rpm/repodata/repomd.xml
 EOF2
 
 dnf install --setopt=tsflags=nodocs -y kubectl
-curl -sSL -o ~/.kubectl_aliases https://raw.githubusercontent.com/ahmetb/kubectl-alias/master/.kubectl_aliases
 EOF
+
+# Install the tkn CLI
+RUN mkdir -p /home/tooling/bin && \
+    if [ "${ARCH}" = "arm64" ]; then \
+        curl -fsSL "https://mirror.openshift.com/pub/cgw/pipelines/${TKN_VERSION}/tkn-linux-arm64.tar.gz" | tar xz -C /usr/local/bin; \
+    else \
+        curl -fsSL "https://mirror.openshift.com/pub/cgw/pipelines/${TKN_VERSION}/tkn-linux-amd64.tar.gz" | tar xz -C /usr/local/bin; \
+    fi && \
+    chmod +x /usr/local/bin/tkn
 
 # install uv
 COPY --from=ghcr.io/astral-sh/uv:latest /uv  /bin/uv
 COPY --from=ghcr.io/astral-sh/uv:latest /uvx /bin/uvx
 
+# copy the caib tool
+COPY --from=builder /opt/app-root/src/caib /usr/local/bin/caib
+
 # install jumpstarter & other python dependencies
 COPY requirements.txt /tmp/requirements.txt
 
-# install patched version of jumpstarter
-RUN uv venv /venv && \
-    uv pip install "git+${JUMPSTARTER_REPO}@${JUMPSTARTER_VERSION}#subdirectory=python/packages/jumpstarter-all" && \
+RUN uv venv --clear /venv && \
     uv pip install -r /tmp/requirements.txt && \
-    rm -rf /tmp/requirements.txt && \
-    echo "alias python='uv run python'" >> /home/user/.bashrc && \
-    echo "alias pip='uv pip'" >> /home/user/.bashrc && \
-    echo "source /venv/bin/activate" >> /home/user/.bashrc 
-
-# install the Fast Flash Tool https://github.com/jumpstarter-dev/fls
-RUN if [ "$ARCH" = "arm64" ]; then \
-        curl -L https://github.com/jumpstarter-dev/fls/releases/download/0.2.0/fls-aarch64-linux-musl -o /usr/local/bin/fls; \
-    else \
-        curl -L https://github.com/jumpstarter-dev/fls/releases/download/0.2.0/fls-x86_64-linux -o /usr/local/bin/fls; \
-    fi  && \
-    chmod +x /usr/local/bin/fls
-
-# install swtpm
-RUN mkdir -p /var/lib/swtpm-localca /tmp/swtpm
-COPY entrypoint.sh /usr/local/bin/entrypoint.sh
+    uv pip install "git+${JUMPSTARTER_REPO}@${JUMPSTARTER_VERSION}#subdirectory=python/packages/jumpstarter-all" && \
+    rm -rf /tmp/requirements.txt
 
 # clean up
-RUN chmod 755 /usr/local/bin/* && \
-    chmod -R g+rwX ${HOME}
-# A last pass to make sure that an arbitrary user can write in $HOME
-RUN chgrp -R 0 /home && chmod -R g=u /home
+RUN dnf -y clean all --enablerepo='*' && \
+    rm -rf /var/cache/dnf
 
-USER 10001
-ENV HOME=/home/user
-WORKDIR /home/user
-ENV TPM2TOOLS_TCTI="swtpm:host=127.0.0.1,port=2321"
-ENTRYPOINT ["entrypoint.sh"]
-CMD ["tail", "-f", "/dev/null"]
+# Directory with the sources is set as the working directory so all scripts
+# can execute relative to this path.
+WORKDIR ${HOME}
+
+# Reset permissions of modified directories and add default user
+RUN useradd -u 1001 -r -g 0 -d ${HOME} -c "Default Application User" default && \
+    chown -R 1001:0 ${APP_ROOT}
+
+USER 1001
