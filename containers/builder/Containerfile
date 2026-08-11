@@ -31,7 +31,7 @@ ENV UV_PYTHON=python3.14 VIRTUAL_ENV=/venv
 
 # install this version of jumpstarter, tkn etc
 ENV JUMPSTARTER_REPO=https://github.com/mickume/jumpstarter \
-    JUMPSTARTER_VERSION=main \
+    JUMPSTARTER_VERSION=develop \
     TKN_VERSION=1.23.0 \
     OC_VERSION=4.21 \
     K8S_VERSION=1.34
