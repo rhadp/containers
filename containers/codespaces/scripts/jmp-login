@@ -1,9 +1,13 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# generate location for the jumpstarter config location
+# generate location for the jumpstarter config
 JMP_CONFIG_LOCATION=/home/user/.config/jumpstarter/clients
 mkdir -p $JMP_CONFIG_LOCATION
+
+# generate location for the caib config
+CAIB_CONFIG_LOCATION=/home/user/.config/caib
+rm -rf $CAIB_CONFIG_LOCATION && mkdir -p $CAIB_CONFIG_LOCATION
 
 # get the user name from the profile
 USER_NAME=`cat /config/user/profile/name`
@@ -13,9 +17,14 @@ CLIENT_NAME=$(echo "$USER_NAME" | tr '[:upper:]' '[:lower:]' | sed 's/[^a-zA-Z0-
 if oc get client "$CLIENT_NAME" -n $JUMPSTARTER_NAMESPACE &>/dev/null; then
   oc delete client "$CLIENT_NAME" -n $JUMPSTARTER_NAMESPACE &>/dev/null || true
 fi
+JMP_CONFIG_FILE=$JMP_CONFIG_LOCATION/$CLIENT_NAME.yaml
+USER_NAMESPACE="$CLIENT_NAME-devspaces"
 
 # create the jumpstarter client config
 jmp admin create client $CLIENT_NAME --insecure-tls --unsafe --nointeractive -n $JUMPSTARTER_NAMESPACE --oidc-username keycloak:$USER_NAME &>/dev/null
 
 # login to jumpstarter
 jmp login --device-flow --nointeractive --insecure-tls --unsafe $CLIENT_NAME@$JUMPSTARTER_LOGIN_ENDPOINT
+
+# create the caib client config
+caib login $CAIB_SERVER
