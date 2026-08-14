@@ -10,6 +10,7 @@ RUNTIME_IMAGE = $(REGISTRY)/$(NAMESPACE)/runtime
 PIPELINE_IMAGE = $(REGISTRY)/$(NAMESPACE)/pipeline
 CODESPACES_IMAGE = $(REGISTRY)/$(NAMESPACE)/codespaces
 BUILDER_IMAGE = $(REGISTRY)/$(NAMESPACE)/builder
+TOOLS_IMAGE = $(REGISTRY)/$(NAMESPACE)/tools
 
 TAG ?= latest
 
@@ -25,7 +26,7 @@ BUILD_ARGS ?= --build-arg TARGETARCH=$(shell uname -m | sed 's/x86_64/amd64/')
 .PHONY: help all build-all base builder runtime pipeline codespaces clean clean-all push-all
 
 # Build all images
-build-all: update runtime builder pipeline codespaces
+build-all: update tools runtime builder pipeline codespaces
 	@echo "✅ All images built successfully!"
 
 update:
@@ -46,6 +47,15 @@ runtime:
 		containers/runtime/
 	@echo "✅ Runtime image built: $(RUNTIME_IMAGE):$(TAG)"
 
+# Build the tools image
+tools:
+	@echo "🔨 Building tools image..."
+	$(CONTAINER_TOOL) build $(BUILD_ARGS) \
+		-f containers/tools/Containerfile \
+		-t $(TOOLS_IMAGE):$(TAG) \
+		containers/tools/
+	@echo "✅ Tools image built: $(TOOLS_IMAGE):$(TAG)"
+
 # Build the pipeline image
 pipeline: runtime
 	@echo "🔨 Building pipeline image..."
@@ -55,7 +65,7 @@ pipeline: runtime
 		containers/pipeline/
 	@echo "✅ Pipeline image built: $(PIPELINE_IMAGE):$(TAG)"
 
-# Build the runtime image
+# Build the builder image
 builder:
 	@echo "🔨 Building builder image..."
 	$(CONTAINER_TOOL) build $(BUILD_ARGS) \
@@ -80,6 +90,7 @@ clean:
 	-$(CONTAINER_TOOL) rmi $(PIPELINE_IMAGE):$(TAG) 2>/dev/null || true
 	-$(CONTAINER_TOOL) rmi $(BUILDER_IMAGE):$(TAG) 2>/dev/null || true
 	-$(CONTAINER_TOOL) rmi $(RUNTIME_IMAGE):$(TAG) 2>/dev/null || true
+	-$(CONTAINER_TOOL) rmi $(TOOLS_IMAGE):$(TAG) 2>/dev/null || true
 	@echo "✅ Local images cleaned"
 
 # Clean up all related images including base images

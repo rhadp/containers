@@ -1,19 +1,3 @@
-# caib builder container
-FROM registry.redhat.io/ubi10/go-toolset:latest as builder
-
-ARG TARGETARCH
-ENV CGO_ENABLED=0 GOARCH=${TARGETARCH}
-
-ENV BUILDER_REPO=https://github.com/mickume/automotive-dev-operator \
-    BUILDER_VERSION=develop
-
-# build the caib tool
-RUN git clone -b ${BUILDER_VERSION} ${BUILDER_REPO} && \
-    cd automotive-dev-operator && \
-    make build-caib && \
-    chmod +x bin/caib && \
-    cp bin/caib /opt/app-root/src/caib
-
 #https://catalog.redhat.com/en/software/containers/rhel10/s2i-core/677cf8035fdd0fab2f79e70a#overview
 FROM registry.redhat.io/rhel10/s2i-core:10.2
 
@@ -148,7 +132,8 @@ COPY --from=ghcr.io/astral-sh/uv:latest /uv  /bin/uv
 COPY --from=ghcr.io/astral-sh/uv:latest /uvx /bin/uvx
 
 # copy the caib tool
-COPY --from=builder /opt/app-root/src/caib /usr/local/bin/caib
+COPY --from=ghcr.io/rhadp/tools:latest /opt/app-root/src/caib /usr/local/bin/caib
+RUN caib --version
 
 # install jumpstarter & other python dependencies
 COPY requirements.txt /tmp/requirements.txt
