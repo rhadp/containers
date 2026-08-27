@@ -81,13 +81,16 @@ dnf install --setopt=tsflags=nodocs -y kubectl
 EOF
 
 # Install the tkn CLI
-RUN mkdir -p /home/tooling/bin && \
-    if [ "${ARCH}" = "arm64" ]; then \
-        curl -fsSL "https://mirror.openshift.com/pub/cgw/pipelines/${TKN_VERSION}/tkn-linux-arm64.tar.gz" | tar xz -C /home/tooling/bin; \
-    else \
-        curl -fsSL "https://mirror.openshift.com/pub/cgw/pipelines/${TKN_VERSION}/tkn-linux-amd64.tar.gz" | tar xz -C /home/tooling/bin; \
-    fi && \
-    chmod +x /home/tooling/bin/tkn
+#RUN mkdir -p /home/tooling/bin && \
+#    if [ "${ARCH}" = "arm64" ]; then \
+#        curl -fsSL "https://mirror.openshift.com/pub/cgw/pipelines/${TKN_VERSION}/tkn-linux-arm64.tar.gz" | tar xz -C /home/tooling/bin; \
+#    else \
+#        curl -fsSL "https://mirror.openshift.com/pub/cgw/pipelines/${TKN_VERSION}/tkn-linux-amd64.tar.gz" | tar xz -C /home/tooling/bin; \
+#    fi && \
+#    chmod +x /home/tooling/bin/tkn
+
+# install from upstream since we don't ship tkn for ARM64
+RUN dnf copr enable chmouel/tektoncd-cli && dnf install tektoncd-cli
 
 # install node (x64 binaries require libatomic)
 ARG NODE_VERSION=26.5.0
