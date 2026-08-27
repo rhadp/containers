@@ -89,9 +89,6 @@ EOF
 #    fi && \
 #    chmod +x /home/tooling/bin/tkn
 
-# install from upstream since we don't ship tkn for ARM64
-RUN dnf copr enable chmouel/tektoncd-cli && dnf install tektoncd-cli
-
 # install node (x64 binaries require libatomic)
 ARG NODE_VERSION=26.5.0
 RUN dnf install -y --setopt=tsflags=nodocs libatomic && \
