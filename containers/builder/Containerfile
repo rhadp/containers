@@ -14,11 +14,10 @@ ENV ARCH=${TARGETARCH:-arm64} \
 ENV UV_PYTHON=python3.14 VIRTUAL_ENV=/venv
 
 # install this version of jumpstarter, tkn etc
-ENV JUMPSTARTER_REPO=https://github.com/mickume/jumpstarter \
+ENV JUMPSTARTER_REPO=https://github.com/jumpstarter-dev/jumpstarter \
     JUMPSTARTER_VERSION=develop \
-    TKN_VERSION=1.23.0 \
-    OC_VERSION=4.21 \
-    K8S_VERSION=1.34
+    OC_VERSION=4.22 \
+    K8S_VERSION=1.35
     
 # install epel releases
 RUN dnf install -y --setopt=tsflags=nodocs https://dl.fedoraproject.org/pub/epel/epel-release-latest-10.noarch.rpm && \
@@ -79,15 +78,6 @@ EOF2
 
 dnf install --setopt=tsflags=nodocs -y kubectl
 EOF
-
-# Install the tkn CLI
-RUN mkdir -p /home/tooling/bin && \
-    if [ "${ARCH}" = "arm64" ]; then \
-        curl -fsSL "https://mirror.openshift.com/pub/cgw/pipelines/${TKN_VERSION}/tkn-linux-arm64.tar.gz" | tar xz -C /usr/local/bin; \
-    else \
-        curl -fsSL "https://mirror.openshift.com/pub/cgw/pipelines/${TKN_VERSION}/tkn-linux-amd64.tar.gz" | tar xz -C /usr/local/bin; \
-    fi && \
-    chmod +x /usr/local/bin/tkn
 
 # install node (x64 binaries require libatomic)
 ARG NODE_VERSION=26.5.0
