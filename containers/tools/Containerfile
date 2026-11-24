@@ -5,7 +5,7 @@ ARG TARGETARCH
 ENV CGO_ENABLED=0 GOARCH=${TARGETARCH}
 
 ENV BUILDER_REPO=https://github.com/mickume/automotive-dev-operator \
-    BUILDER_VERSION=develop
+    BUILDER_VERSION=main
 
 # build the caib tool
 RUN git clone -b ${BUILDER_VERSION} ${BUILDER_REPO} && \
