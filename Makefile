@@ -11,6 +11,8 @@ PIPELINE_IMAGE = $(REGISTRY)/$(NAMESPACE)/pipeline
 CODESPACES_IMAGE = $(REGISTRY)/$(NAMESPACE)/codespaces
 BUILDER_IMAGE = $(REGISTRY)/$(NAMESPACE)/builder
 TOOLS_IMAGE = $(REGISTRY)/$(NAMESPACE)/tools
+AUTOSD_IMAGE = $(REGISTRY)/$(NAMESPACE)/autosd
+AUTOSD_BUILDBOX_IMAGE = $(REGISTRY)/$(NAMESPACE)/autosd-buildbox
 
 TAG ?= latest
 
@@ -23,10 +25,10 @@ CONTAINER_NAME ?= rhas-runtime
 # Build arguments
 BUILD_ARGS ?= --build-arg TARGETARCH=$(shell uname -m | sed 's/x86_64/amd64/')
 
-.PHONY: help all build-all base builder runtime pipeline codespaces clean clean-all push-all
+.PHONY: help all build-all base builder runtime pipeline codespaces autosd autosd-buildbox clean clean-all push-all
 
 # Build all images
-build-all: update tools runtime builder pipeline codespaces
+build-all: update tools runtime builder pipeline codespaces autosd autosd-buildbox
 	@echo "✅ All images built successfully!"
 
 update:
@@ -36,6 +38,7 @@ update:
 	$(CONTAINER_TOOL) pull registry.redhat.io/devspaces/udi-base-rhel10:3.29
 	$(CONTAINER_TOOL) pull registry.redhat.io/rhel10/s2i-core:10.2
 	$(CONTAINER_TOOL) pull ghcr.io/astral-sh/uv
+	$(CONTAINER_TOOL) pull quay.io/centos/centos:stream10
 	@echo "✅ Base images updated"
 
 # Build the runtime image
@@ -83,6 +86,24 @@ codespaces:
 		containers/codespaces/
 	@echo "✅ Codespaces image built: $(CODESPACES_IMAGE):$(TAG)"
 
+# Build the autosd image
+autosd:
+	@echo "🔨 Building autosd image..."
+	$(CONTAINER_TOOL) build $(BUILD_ARGS) \
+		-f containers/autosd/Containerfile \
+		-t $(AUTOSD_IMAGE):$(TAG) \
+		containers/autosd/
+	@echo "✅ AutoSD image built: $(AUTOSD_IMAGE):$(TAG)"
+
+# Build the autosd-buildbox image
+autosd-buildbox:
+	@echo "🔨 Building autosd-buildbox image..."
+	$(CONTAINER_TOOL) build $(BUILD_ARGS) \
+		-f containers/autosd-buildbox/Containerfile \
+		-t $(AUTOSD_BUILDBOX_IMAGE):$(TAG) \
+		containers/autosd-buildbox/
+	@echo "✅ AutoSD buildbox image built: $(AUTOSD_BUILDBOX_IMAGE):$(TAG)"
+
 # Clean up locally built images
 clean:
 	@echo "🧹 Cleaning up locally built images..."
@@ -91,6 +112,8 @@ clean:
 	-$(CONTAINER_TOOL) rmi $(BUILDER_IMAGE):$(TAG) 2>/dev/null || true
 	-$(CONTAINER_TOOL) rmi $(RUNTIME_IMAGE):$(TAG) 2>/dev/null || true
 	-$(CONTAINER_TOOL) rmi $(TOOLS_IMAGE):$(TAG) 2>/dev/null || true
+	-$(CONTAINER_TOOL) rmi $(AUTOSD_IMAGE):$(TAG) 2>/dev/null || true
+	-$(CONTAINER_TOOL) rmi $(AUTOSD_BUILDBOX_IMAGE):$(TAG) 2>/dev/null || true
 	@echo "✅ Local images cleaned"
 
 # Clean up all related images including base images
@@ -101,6 +124,7 @@ clean-all: clean
 	-$(CONTAINER_TOOL) rmi registry.redhat.io/devspaces/udi-base-rhel10:3.29 2>/dev/null || true
 	-$(CONTAINER_TOOL) rmi registry.redhat.io/rhel10/s2i-core:10.2 2>/dev/null || true
 	-$(CONTAINER_TOOL) rmi ghcr.io/astral-sh/uv 2>/dev/null || true
+	-$(CONTAINER_TOOL) rmi quay.io/centos/centos:stream10 2>/dev/null || true
 	-$(CONTAINER_TOOL) system prune -f 2>/dev/null || true
 	@echo "✅ All images cleaned"
 

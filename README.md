@@ -32,12 +32,12 @@ Makefile             Local builds with podman
 Pulling the base images requires a login to `registry.redhat.io`.
 
 ```shell
-make build-all          # tools, runtime, builder, pipeline, codespaces
+make build-all          # all images
 make runtime            # a single image
 make clean              # remove locally built images
 ```
 
-`REGISTRY`, `NAMESPACE`, `TAG` and `CONTAINER_TOOL` can be overridden. `autosd` and `autosd-buildbox` are not in the Makefile yet; build them directly from `containers/<name>/`.
+`REGISTRY`, `NAMESPACE`, `TAG` and `CONTAINER_TOOL` can be overridden.
 
 Note that `runtime`, `builder`, `codespaces` and `pipeline` copy from or build on `ghcr.io/rhadp/*:latest`, not the locally built images.
 
