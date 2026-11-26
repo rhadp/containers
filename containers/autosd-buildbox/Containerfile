@@ -1,0 +1,26 @@
+FROM quay.io/centos/centos:stream10
+
+LABEL summary="Base image for building AutoSD code" 
+
+# copy configuration failes to the filesystem
+COPY /files rpms.in /
+
+RUN dnf update -y && \
+dnf install -y 'dnf-command(config-manager)' epel-release
+
+# enable crb and autosd repositories
+RUN dnf config-manager --set-enabled crb && \
+dnf config-manager --add-repo https://buildlogs.centos.org/10-stream/automotive/$(arch)/packages-main/ && \
+dnf config-manager --add-repo https://buildlogs.centos.org/10-stream/autosd/$(arch)/packages-main/
+
+# install base packages
+RUN dnf install -y $(tr '\n' ' ' < /rpms.in ) && \
+    dnf clean all
+
+# setup rpm environment in /opt/autosd
+RUN rpmdev-setuptree && \
+mkdir -p /opt/autosd && \
+mv /root/rpmbuild /opt/autosd && \
+chown -R 1001:0 /opt/autosd
+
+WORKDIR /opt/autosd/workspace

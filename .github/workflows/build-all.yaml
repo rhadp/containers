@@ -10,6 +10,30 @@ on:
       - 'main'
 
 jobs:
+  build-autosd:
+    name: "building 'autosd'"
+    uses: ./.github/workflows/build.yaml
+    with:
+      container_name: autosd
+    secrets: inherit
+    permissions:
+      packages: write
+      contents: read
+      id-token: write
+      attestations: write
+
+  build-autosd-buildbox:
+    name: "building 'autosd-buildbox'"
+    uses: ./.github/workflows/build.yaml
+    with:
+      container_name: autosd-buildbox
+    secrets: inherit
+    permissions:
+      packages: write
+      contents: read
+      id-token: write
+      attestations: write
+
   build-tools:
     name: "building 'tools'"
     uses: ./.github/workflows/build.yaml
