@@ -1,43 +1,49 @@
 # Red Hat Automotive Suite - Containers
 
-Containers images with tools for developers 👨‍💻👩‍💻 and to run workloads on the Red Hat Automotive Suite (RHAS). 
+Container images for developing, building and running workloads on the Red Hat Automotive Suite (RHAS).
 
-## Container Images
+All images are published to `ghcr.io/rhadp/<name>` for `linux/amd64` and `linux/arm64`.
 
-TBD
+## Images
 
-## Building the container images
+| Image | Base | Purpose |
+|---|---|---|
+| `tools` | `ubi10/go-toolset` | Builds the `caib` CLI from [automotive-dev-operator](https://github.com/mickume/automotive-dev-operator). Only used as a source for the other images. |
+| `runtime` | `ubi10` | Minimal image for running workloads: Python 3.14 + `uv`, `oc`, `kubectl`, `caib`, Jumpstarter, Ansible, boto3. |
+| `pipeline` | `runtime` | `runtime` plus extra Python libraries (Kubernetes, GitHub/GitLab, Google Cloud, …) for CI/CD pipelines. |
+| `builder` | `rhel10/s2i-core` | Full build environment: everything in `pipeline` plus GCC, CMake, Go, Rust, Node.js, `protoc`, `rpm-build`, `createrepo_c`. |
+| `codespaces` | `devspaces/udi-base-rhel10` | Same toolchain as `builder`, packaged as an OpenShift Dev Spaces workspace image. Adds the helper scripts `init-workspace`, `jmp-login` and `pac-setup`. |
+| `autosd` | `centos:stream10` | Minimal CentOS Stream 10 image with the AutoSD and Automotive repositories enabled. |
+| `autosd-buildbox` | `centos:stream10` | `autosd` plus `rpmdevtools` and common CLI tools, with an RPM build tree in `/opt/autosd`. |
 
-Run the following command to build the images locally:
+Jumpstarter is installed from the `develop` branch of [mickume/jumpstarter](https://github.com/mickume/jumpstarter). Python packages live in a virtual environment at `/venv`.
 
-```shell
-make build-all
+## Repository layout
+
+```
+containers/<name>/   Containerfile and build context for each image
+.github/workflows/   GitHub Actions that build and push the images
+scripts/             Local helper scripts
+Makefile             Local builds with podman
 ```
 
-Build Chain Structure
+## Building locally
 
-  base (UDI9)
-  ├── builder
-  |    └── codespaces
-  runtime (UBI9)
-  └── pipeline
+Pulling the base images requires a login to `registry.redhat.io`.
 
-Build on GitHub:
+```shell
+make build-all          # tools, runtime, builder, pipeline, codespaces
+make runtime            # a single image
+make clean              # remove locally built images
+```
 
-This repo contains [actions](https://github.com/rhadp/containers/actions), including:
-* [![release latest container images](https://github.com/rhadp/containers/actions/workflows/build-all.yaml/badge.svg)](https://github.com/rhadp/containers/actions/workflows/build-all.yaml)
+`REGISTRY`, `NAMESPACE`, `TAG` and `CONTAINER_TOOL` can be overridden. `autosd` and `autosd-buildbox` are not in the Makefile yet; build them directly from `containers/<name>/`.
 
-The workflow creates both the X86 and ARM64 versions of each container.
+Note that `runtime`, `builder`, `codespaces` and `pipeline` copy from or build on `ghcr.io/rhadp/*:latest`, not the locally built images.
 
-## Contributing
+## CI
 
-Fork the repository and submit a pull request.
-
-## Development
-
-A list of ideas, open issues etc related to the Red Hat Automotive Suite (RHAS) is [here](https://github.com/orgs/rhadp/projects/1).  
-
-Also check the [Issues](https://github.com/rhadp/containers/issues) section of the this repository.
+[`build-all.yaml`](.github/workflows/build-all.yaml) runs on every push and pull request to `main` and builds all images. Pushes to `main` are tagged `latest`; every build is also tagged with the git version. `tools`, `runtime`, `pipeline`, `builder` and `codespaces` also have their own `build-<name>.yaml` workflow for manual runs.
 
 ## Disclaimer
 
